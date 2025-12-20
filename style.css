@@ -2,13 +2,10 @@
   --bg-start: #FF9A3C;
   --bg-end:   #FF5E3A;
   --orange-bright: #ff7a00;
-
-  /* Tamaños ajustados para que todo quepa en PC */
-  --cell-size: clamp(56px, 7.2vw, 96px); /* max reducido */
+  --cell-size: clamp(56px, 7.2vw, 96px);
   --board-gap: clamp(6px, 1vw, 10px);
-
-  --container-max-width: 760px; /* ancho del panel */
-  --container-vertical-margin: 48px; /* espacio total arriba/abajo reservado */
+  --container-max-width: 760px;
+  --container-vertical-margin: 48px;
 }
 
 /* Base */
@@ -26,11 +23,16 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 
-/* Background layers kept behind */
-#bgTridents,#bgEmojis{ position:fixed; inset:0; z-index:0; pointer-events:none; }
-.bg-item{ position:absolute; pointer-events:none; user-select:none; mix-blend-mode:overlay; }
+/* Background layers (very back) */
+#bgTridents,#bgEmojis{
+  position:fixed;
+  inset:0;
+  z-index:0; /* behind everything */
+  pointer-events:none;
+}
+.bg-item{ position:absolute; pointer-events:none; user-select:none; }
 
-/* Container: centered, limited height so it fits */
+/* App container (above background layers) */
 .container{
   width:100%;
   max-width:var(--container-max-width);
@@ -39,7 +41,7 @@ body{
   border-radius:12px;
   padding:18px;
   box-shadow: 0 18px 40px rgba(2,6,23,0.32), inset 0 1px 0 rgba(255,255,255,0.02);
-  z-index:12;
+  z-index: 10; /* above bg layers */
   display:flex;
   flex-direction:column;
   gap:10px;
@@ -48,49 +50,29 @@ body{
   border: 1px solid rgba(255,255,255,0.04);
 }
 
-/* Header compact */
+/* Header */
 .title{ margin:0; font-size:1.25rem; color:#fff; font-weight:800; text-shadow:0 2px 10px rgba(0,0,0,0.22); letter-spacing:0.6px; }
 .subtitle{ margin:4px 0 8px 0; color:rgba(255,255,255,0.9); font-size:0.88rem; font-weight:600; }
 
-/* Controls + scoreboard compact */
-.controls{ width:100%; display:flex; justify-content:center; gap:8px; }
-.control-row.small{
-  display:flex; gap:8px; align-items:center;
-  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
-  padding:6px 8px; border-radius:10px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.02);
-}
-.choice{ padding:6px 10px; font-size:18px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background:transparent; font-weight:800; cursor:pointer; transition: transform .12s ease, box-shadow .12s ease; }
-.choice:hover{ transform:translateY(-2px); box-shadow:0 8px 18px rgba(0,0,0,0.16); }
-.choice.active{ background: rgba(255,255,255,0.12); color:#062022; }
-
-/* Score row */
+/* Scoreboard */
 .scoreboard{ width:100%; display:flex; justify-content:space-between; gap:10px; margin-top:4px; }
 .score-item{
-  flex:1; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));
-  padding:10px; border-radius:12px; text-align:center; min-width:0;
+  flex:1;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.02));
+  padding:10px;
+  border-radius:12px;
+  text-align:center;
+  min-width:0;
   border:1px solid rgba(255,255,255,0.03);
   box-shadow: inset 0 6px 18px rgba(0,0,0,0.06), 0 8px 20px rgba(0,0,0,0.10);
-  backdrop-filter: blur(3px);
 }
 .score-item strong{ display:block; font-size:0.88rem; color: rgba(255,255,255,0.92); font-weight:800; }
 .score-item span{ display:block; margin-top:6px; font-weight:800; color:#fff; font-size:1.05rem; }
 
-/* Board area: allow it to shrink to fit the container */
-.board-area{
-  width:100%;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:10px;
-  flex-shrink:1;
-  overflow:visible;
-}
-
-/* Message small */
+/* Board area */
+.board-area{ width:100%; display:flex; flex-direction:column; align-items:center; gap:10px; flex-shrink:1; overflow:visible; }
 .message{ width:100%; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,0.02); color:rgba(255,255,255,0.92); font-weight:600; text-align:center; font-size:0.95rem; }
 
-/* Board grid reduced/gap smaller (card look) */
 .board{
   display:grid;
   grid-template-columns: repeat(3, var(--cell-size));
@@ -102,6 +84,7 @@ body{
   box-shadow: 0 12px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.02);
   justify-content:center;
   border: 1px solid rgba(255,255,255,0.03);
+  z-index:12; /* above container base */
 }
 
 /* Cells */
@@ -115,9 +98,7 @@ body{
   font-size: clamp(16px, 5.2vw, 40px);
   color:#fff;
   cursor:pointer;
-  box-shadow:
-    0 12px 22px rgba(0,0,0,0.22),
-    inset 0 4px 8px rgba(255,255,255,0.02);
+  box-shadow: 0 12px 22px rgba(0,0,0,0.22), inset 0 4px 8px rgba(255,255,255,0.02);
   transition: transform .12s ease, box-shadow .12s ease;
   user-select:none;
 }
@@ -125,160 +106,67 @@ body{
 .cell.disabled{ cursor:not-allowed; opacity:0.92; }
 .cell.win{ outline:3px solid rgba(255,255,255,0.06); box-shadow: 0 18px 36px rgba(255,140,0,0.12); }
 
-/* Board logo BELOW the grid; ensure visible by reducing margin and keeping it inside container */
+/* Board logo fixed under the board (not overlapping cells) */
 .board-logo{
   margin-top:10px;
   max-width:160px;
   width:auto;
   height:auto;
   opacity:0.98;
-  z-index:13;
+  z-index:11; /* keep under any modal but above container */
   filter: drop-shadow(0 8px 18px rgba(0,0,0,0.18));
 }
 .board-logo.hidden{ display:none; }
 
-/* Overlay & intro adapted to smaller panel */
+/* Intro overlay (centered, above app) */
 .intro-overlay{
   position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
   background: linear-gradient(180deg, rgba(255,152,50,1), rgba(230,110,40,1));
-  z-index:2200;
+  z-index: 2200; /* ensure on top */
 }
+.intro-overlay.hidden{ display:none; pointer-events:none; }
 .intro-card{
   width:min(520px, 44vw); padding:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
-  position:relative; z-index:2195;
+  position:relative; z-index:2210;
 }
 .intro-card img#introLogo{ max-width: clamp(160px, 28vw, 420px); filter: drop-shadow(0 8px 18px rgba(0,0,0,0.22)); }
 
-/* Banner / overlay card */
-.overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background: rgba(2,6,23,0.35); z-index:2000; }
-.overlay-card{
-  background: linear-gradient(180deg, rgba(210,95,18,0.98), rgba(180,70,18,0.98));
-  color: var(--panel-text, #fff);
-  border-radius:12px; padding:20px;
-  width:min(520px, 92%); text-align:center;
-  box-shadow: 0 22px 56px rgba(0,0,0,0.36);
-  border: 1px solid rgba(255,255,255,0.06);
-}
+/* Loading bar */
+.loading-bar-outer{ width:72%; max-width:560px; height:12px; background: rgba(0,0,0,0.12); border-radius:10px; overflow:hidden; margin-top:12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); align-self:center; z-index:2215; }
+.loading-bar{ height:100%; width:0%; background: linear-gradient(90deg, #ffd9b3, var(--orange-bright)); border-radius:8px; transition: width .12s linear; z-index:2216; }
+.loading-text{ margin-top:8px; color:#fff; font-weight:700; text-align:center; width:100%; align-self:center; z-index:2216; }
 
-/* Smaller banner adjustments */
-.overlay-card .opponent-text{ color:#fff; font-weight:900; margin-bottom:12px; font-size:1.05rem; }
+/* Intro particles container */
+#introParticles{ position:absolute; inset:0; z-index:2195; pointer-events:none; }
+
+/* Backend background items styling (subtle) */
+.bg-item.trident{ opacity: 0.06; filter: blur(.2px); mix-blend-mode: normal; color: rgba(255,255,255,0.06); }
+.bg-item.emoji{ opacity: 0.045; filter: blur(.25px); }
+
+/* Banner (shown after intro completes) */
+.overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background: rgba(2,6,23,0.35); z-index: 2300; }
+.overlay.hidden{ display:none; pointer-events:none; }
+.overlay-card{ background: linear-gradient(180deg, rgba(210,95,18,0.98), rgba(180,70,18,0.98)); color:#fff; border-radius:12px; padding:20px; width:min(520px,92%); box-shadow: 0 22px 56px rgba(0,0,0,0.36); border: 1px solid rgba(255,255,255,0.06); text-align:center; }
 .banner-start{ min-width:160px; padding:10px 18px; font-weight:800; background:#fff; color: var(--bg-end); border-radius:10px; border:none; cursor:pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
 
-/* Loading bar / texto (dentro de .intro-card bajo el logo) */
-.loading-bar-outer{
-  width:72%;
-  max-width:560px;
-  height:12px;
-  background: rgba(0,0,0,0.12);
-  border-radius:10px;
-  overflow:hidden;
-  margin-top:12px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
-  align-self:center;
-  z-index:2198;
-}
-.loading-bar{
-  height:100%;
-  width:0%;
-  background: linear-gradient(90deg, #ffd9b3, var(--orange-bright));
-  border-radius:8px;
-  transition: width .12s linear;
-  z-index:2199;
-}
-.loading-text{
-  margin-top:8px; color:#fff; font-weight:700; text-align:center; width:100%; align-self:center; z-index:2199;
-}
+/* Result modal (right side) */
+.modal{ position: fixed; right: 36px; top: 50%; transform: translateY(-50%); z-index: 2400; display:flex; align-items:center; justify-content:center; }
+.modal.hidden{ display:none; pointer-events:none; opacity:0; }
+.modal-content{ border-radius:12px; box-shadow: 0 22px 52px rgba(0,0,0,0.36); border:1px solid rgba(0,0,0,0.08); padding:22px; background: linear-gradient(180deg, rgba(140,50,10,0.98), rgba(110,40,8,0.98)); color:#fff; min-width:260px; max-width:360px; }
 
-/* Intro particles container (asegura que las partículas estén sobre el fondo pero debajo del logo) */
-#introParticles{ position:absolute; inset:0; z-index:2190; pointer-events:none; }
-
-/* Atento a los tridentes: más sutiles en todo el fondo */
-.bg-item.trident{
-  opacity: 0.06 !important;
-  filter: blur(.2px) !important;
-  mix-blend-mode: normal !important;
-  color: rgba(255,255,255,0.06) !important;
-}
-.bg-item.emoji{
-  opacity: 0.045 !important;
-  filter: blur(.25px) !important;
-}
-
-/* --- Patch: ocultar intro/banner cuando se agrega la clase .hidden --- */
-.intro-overlay.hidden{
-  display: none;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity .22s ease, visibility .22s ease;
-}
-.overlay.hidden{
-  display: none;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity .22s ease, visibility .22s ease;
-}
-
-/* Modal (resultado) — card with side placement (hidden by default) */
-.modal{
-  position: fixed;
-  right: 36px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 2215;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: auto;
-}
-.modal.hidden{
-  display: none;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-/* Modal content style */
-.modal-content{
-  border-radius:12px;
-  box-shadow: 0 22px 52px rgba(0,0,0,0.36);
-  border:1px solid rgba(0,0,0,0.08);
-  padding:22px;
-  background: linear-gradient(180deg, rgba(140,50,10,0.98), rgba(110,40,8,0.98));
-  color: #fff;
-  min-width: 260px;
-  max-width: 360px;
-}
-
-/* Result box (side) style fallback */
-.result-box{ background: linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.01)); padding:18px; border-radius:10px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); }
-
-/* Buttons primary */
-.primary{
-  background: linear-gradient(180deg, var(--orange-bright), #f17321);
-  color:#fff;
-  border-radius:10px;
-  padding:10px 14px;
-  border:none;
-  box-shadow: 0 10px 28px rgba(0,0,0,0.18);
-}
+/* Buttons */
+.primary{ background: linear-gradient(180deg, var(--orange-bright), #f17321); color:#fff; border-radius:10px; padding:10px 14px; border:none; box-shadow: 0 10px 28px rgba(0,0,0,0.18); }
 
 /* Responsive adjustments */
-@media (max-width: 900px){
+@media (max-width:900px){
   :root{ --cell-size: clamp(56px, 14vw, 96px); }
-  .container{ max-width: 96%; max-height: calc(100vh - 40px); padding:12px; }
-  .title{ font-size:1.05rem; }
-  .board-logo{ max-width:120px; }
+  .container{ max-width:96%; max-height: calc(100vh - 40px); padding:12px; }
   .loading-bar-outer{ width:86%; }
-  .modal{ right: 12px; left: 12px; top: auto; bottom: 14px; transform: none; justify-content:center; }
+  .modal{ right:12px; left:12px; top:auto; bottom:14px; transform:none; justify-content:center; }
   .modal-content{ max-width: calc(100% - 48px); }
 }
-
 @media (max-width:480px){
   :root{ --cell-size: clamp(50px, 22vw, 92px); }
-  .title{ font-size:1rem; }
-  .score-item strong{ font-size:0.85rem; }
   .intro-card img#introLogo{ max-width:56vw; }
   .loading-bar-outer{ width:88%; height:10px; }
   .loading-text{ font-size:0.9rem; }
