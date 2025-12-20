@@ -238,29 +238,51 @@ function hideBanner(){ const b = by('opponentBanner'); if(!b) return; b.classLis
 async function showIntroThenProceed(){
   introOverlay = introOverlay || by('introOverlay');
   introCard = introCard || (introOverlay && introOverlay.querySelector('.intro-card'));
+
   if(!introOverlay){
-    // no intro available -> show banner direct
+    // No hay intro -> mostrar banner y comenzar
     attachStartListener();
     showBanner();
+    startGame();
     return;
   }
-  // Show intro + background/tridents
+
+  // Mostrar intro y partículas
   introOverlay.classList.remove('hidden');
   introOverlay.setAttribute('aria-hidden','false');
   populateBackground();
   populateIntroParticles();
-  // run loading animation
-  await animateLoading(INTRO_DURATION);
-  // After loading: hide intro -> show banner briefly -> start game automatically
+
+  // Ejecutar animación de carga
+  try {
+    await animateLoading(INTRO_DURATION);
+  } catch(e){
+    console.error('animateLoading error:', e);
+  }
+
+  // Ocultar intro
   introOverlay.classList.add('hidden');
   introOverlay.setAttribute('aria-hidden','true');
+
+  // Mostrar banner y forzar inicio (fallback)
   attachStartListener();
   showBanner();
-  // small delay so user sees banner, then auto-start
+
+  // Esperamos un instante para que el usuario vea el banner, luego forzamos start
   setTimeout(()=>{
-    hideBanner();
-    startGame();
-  }, 700);
+    if(startBtn && typeof startBtn.click === 'function'){
+      try{
+        startBtn.click();
+        dbg('startBtn clicked programmatically');
+      } catch(err){
+        dbg('startBtn.click failed, calling startGame()', err);
+        startGame();
+      }
+    } else {
+      // Si no existe el botón por alguna razón, arrancamos directamente
+      startGame();
+    }
+  }, 600);
 }
 
 // ------------------- Populate intro particles (in overlay) -------------------
