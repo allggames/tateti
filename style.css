@@ -30,9 +30,11 @@ body{
   padding:20px;
   border-radius:12px;
   box-shadow: 0 10px 30px rgba(2,6,23,0.6);
+  text-align:center;
 }
 
-h1{margin:0 0 14px 0;font-size:1.6rem;text-align:center;color:var(--accent);}
+.title{margin:0;font-size:1.6rem;color:var(--accent);font-weight:700;}
+.subtitle{margin:6px 0 14px 0;color:var(--muted);font-size:0.98rem;}
 
 .controls{
   display:flex;
@@ -127,11 +129,21 @@ h1{margin:0 0 14px 0;font-size:1.6rem;text-align:center;color:var(--accent);}
   color:inherit;
   padding:20px;
   border-radius:10px;
-  width:min(420px, 90%);
+  width:min(480px, 92%);
   text-align:center;
   box-shadow:0 12px 36px rgba(2,6,23,0.8);
 }
 .modal-content h2{margin:0 0 10px;color:var(--accent)}
+.modal-label{font-weight:700;margin:8px 0;color:#ffffff}
+.modal-percent{
+  margin:6px auto 8px auto;
+  font-size:48px;
+  font-weight:800;
+  color:var(--win);
+}
+.modal-subtext{color:var(--muted);margin-bottom:6px}
+.modal-instruction{margin-top:8px;color:var(--muted);font-weight:600}
+
 .modal-actions{margin-top:12px;display:flex;justify-content:center;gap:8px}
 
 /* Botón disabled look */
@@ -141,4 +153,5 @@ button.disabled{opacity:0.6;cursor:not-allowed;}
 @media (max-width:480px){
   :root{ --cell-size: 86px; }
   .cell{ font-size: calc(var(--cell-size) * 0.62); }
+  .modal-percent{font-size:36px}
 }
