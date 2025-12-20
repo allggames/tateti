@@ -27,11 +27,7 @@
 
       <div class="control-row">
         <label>Dificultad:</label>
-        <select id="difficulty">
-          <option value="easy" selected>Fácil</option>
-          <option value="medium">Medio</option>
-          <option value="hard">Difícil</option>
-        </select>
+        <div class="difficulty-note">Intermedia (entre Fácil y Medio)</div>
       </div>
 
       <div class="control-row">
@@ -42,12 +38,18 @@
 
     <section class="scoreboard">
       <div class="score-item">
-        <strong>Tus bonos</strong>
-        <span id="playerBonuses">0</span>
+        <strong>Tus victorias</strong>
+        <span id="playerWins">0 / 3</span>
+        <small id="playerBonusPercent">Bono: 0%</small>
       </div>
       <div class="score-item">
-        <strong>Bonos CPU</strong>
-        <span id="cpuBonuses">0</span>
+        <strong>Victorias CPU</strong>
+        <span id="cpuWins">0 / 3</span>
+        <small id="cpuBonusPercent">Bono: 0%</small>
+      </div>
+      <div class="score-item">
+        <strong>Partidas restantes</strong>
+        <span id="playsLeft">3</span>
       </div>
     </section>
 
@@ -67,7 +69,7 @@
     </section>
 
     <footer class="legend">
-      <p>Hecho con ❤️ — Minimax en dificultad Difícil. Texto en español.</p>
+      <p>Hecho con ❤️ — CPU en dificultad intermedia. Texto en español.</p>
     </footer>
   </main>
 
