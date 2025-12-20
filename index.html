@@ -28,8 +28,8 @@
       <div class="control-row">
         <label>Dificultad:</label>
         <select id="difficulty">
-          <option value="easy">Fácil</option>
-          <option value="medium" selected>Medio</option>
+          <option value="easy" selected>Fácil</option>
+          <option value="medium">Medio</option>
           <option value="hard">Difícil</option>
         </select>
       </div>
@@ -37,6 +37,17 @@
       <div class="control-row">
         <button id="startBtn" class="primary">Comenzar</button>
         <button id="restartBtn">Reiniciar</button>
+      </div>
+    </section>
+
+    <section class="scoreboard">
+      <div class="score-item">
+        <strong>Tus bonos</strong>
+        <span id="playerBonuses">0</span>
+      </div>
+      <div class="score-item">
+        <strong>Bonos CPU</strong>
+        <span id="cpuBonuses">0</span>
       </div>
     </section>
 
