@@ -1,6 +1,7 @@
 // Tatetí - Jugador vs NEXUS (CPU)
-// Intro ahora se muestra como pantalla de inicio y se auto-oculta después de un tiempo.
-// Al ocultar el intro salta directamente el cartel "HOY JUGARÁS CONTRA NEXUS".
+// Intro actualizado: pantalla de presentación con fondo naranja + many 🔱,
+// barra de carga visual que avanza automáticamente. Al terminar, ocultar intro
+// y mostrar el cartel "HOY JUGARÁS CONTRA NEXUS" (banner). El resto de la lógica se mantiene.
 
 // Config
 const cpuName = 'NEXUS';
@@ -11,7 +12,9 @@ const WIN_COMBINATIONS = [
 ];
 const MAX_PLAYS = 3;
 const STORAGE_KEY = 'tatetiState_v2';
-const INTRO_DURATION = 1800; // ms que dura la pantalla de inicio antes de pasar al cartel
+
+// Duración total de "carga" en ms
+const INTRO_DURATION = 2400;
 
 // Estado runtime y persistente
 let board = Array(9).fill(null);
@@ -25,7 +28,7 @@ let state = { playerWins: 0, cpuWins: 0, plays: 0 };
 
 // Elementos DOM
 let boardEl, cells, messageEl;
-let introOverlay, opponentBanner, pickX, pickO, startBtn, restartBtn;
+let introOverlay, loadingBar, loadingText, opponentBanner, pickX, pickO, startBtn, restartBtn;
 let playerWinsEl, cpuWinsEl, playerBonusPercentEl, cpuBonusPercentEl, playsLeftEl;
 let resultModal, modalPercent, modalMessage, modalClose;
 let footerLogo;
@@ -44,6 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
   messageEl = document.getElementById('message');
 
   introOverlay = document.getElementById('introOverlay');
+  loadingBar = document.getElementById('loadingBar');
+  loadingText = document.getElementById('loadingText');
 
   opponentBanner = document.getElementById('opponentBanner');
   pickX = document.getElementById('pickX');
@@ -88,10 +93,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Cells
   cells.forEach(c => c.addEventListener('click', onCellClick));
 
-  // keyboard
+  // keyboard: allow Enter to start after banner visible
   document.addEventListener('keydown', (e)=>{
     if(e.key === 'Enter'){
-      // si intro visible: ignora (auto-hide)
       if(!sessionStarted && opponentBanner && !opponentBanner.classList.contains('hidden')){
         hideBanner();
         startGame();
@@ -116,58 +120,69 @@ document.addEventListener('DOMContentLoaded', () => {
   message('Tocá "Comenzar" para iniciar la serie');
 });
 
-// --------- intro / banner flow ----------
+// ---------- intro -> banner flow ----------
 function showIntroThenBanner(){
   showIntro();
-  // auto-hide intro after INTRO_DURATION and show the opponent banner
-  setTimeout(() => {
-    // If user already completed the series while intro shown, skip
+  startLoadingBar(INTRO_DURATION).then(()=> {
+    // after loading completed
+    // if limit reached while loading, skip banner
     if(state.plays >= MAX_PLAYS){
       hideIntro();
       hideBanner();
       return;
     }
+    // fade out intro then show banner
     hideIntro();
-    // a small delay to ensure hide animation looks smooth
-    setTimeout(() => {
-      showBanner();
-    }, 150);
-  }, INTRO_DURATION);
+    setTimeout(()=> showBanner(), 160);
+  });
 }
 function showIntro(){
   if(!introOverlay) return;
   introOverlay.classList.remove('hidden');
+  introOverlay.style.opacity = '1';
   introOverlay.setAttribute('aria-hidden', 'false');
   if(opponentBanner) opponentBanner.classList.add('hidden');
   hideFooterLogo();
+  // reset loading visuals
+  if(loadingBar) loadingBar.style.width = '0%';
+  if(loadingText) loadingText.textContent = 'Cargando el juego...';
 }
 function hideIntro(){
   if(!introOverlay) return;
   introOverlay.classList.add('hidden');
+  introOverlay.style.opacity = '0';
   introOverlay.setAttribute('aria-hidden', 'true');
 }
 
-// --------- banner / footer control ----------
-function showBanner(){
-  if(!opponentBanner) return;
-  opponentBanner.classList.remove('hidden');
-  opponentBanner.setAttribute('aria-hidden', 'false');
+// animate loading bar over `duration` ms, returns Promise
+function startLoadingBar(duration){
+  return new Promise(resolve=>{
+    if(!loadingBar){ setTimeout(resolve, duration); return; }
+    const start = performance.now();
+    function tick(now){
+      const elapsed = now - start;
+      const pct = Math.min(1, elapsed / duration);
+      loadingBar.style.width = (pct * 100) + '%';
+      if(loadingText) loadingText.textContent = `Cargando el juego... ${Math.round(pct*100)}%`;
+      if(pct < 1){
+        requestAnimationFrame(tick);
+      } else {
+        // small delay for UX
+        setTimeout(()=> {
+          if(loadingText) loadingText.textContent = 'Listo';
+          resolve();
+        }, 220);
+      }
+    }
+    requestAnimationFrame(tick);
+  });
 }
-function hideBanner(){
-  if(!opponentBanner) return;
-  opponentBanner.classList.add('hidden');
-  opponentBanner.setAttribute('aria-hidden', 'true');
-}
-function showFooterLogo(){
-  if(!footerLogo) return;
-  footerLogo.classList.remove('hidden');
-  footerLogo.style.display = '';
-}
-function hideFooterLogo(){
-  if(!footerLogo) return;
-  footerLogo.classList.add('hidden');
-  footerLogo.style.display = 'none';
-}
+
+// banner / footer
+function showBanner(){ if(!opponentBanner) return; opponentBanner.classList.remove('hidden'); opponentBanner.setAttribute('aria-hidden','false'); }
+function hideBanner(){ if(!opponentBanner) return; opponentBanner.classList.add('hidden'); opponentBanner.setAttribute('aria-hidden','true'); }
+function showFooterLogo(){ if(!footerLogo) return; footerLogo.classList.remove('hidden'); footerLogo.style.display = ''; }
+function hideFooterLogo(){ if(!footerLogo) return; footerLogo.classList.add('hidden'); footerLogo.style.display = 'none'; }
 
 // ---------- storage / UI ----------
 function loadState(){
@@ -204,24 +219,13 @@ function checkPlaysLimitUI(){
     else { startBtn.disabled = false; startBtn.classList.remove('disabled'); }
   }
 }
-function setActiveChoice(){
-  if(!pickX || !pickO) return;
-  pickX.classList.toggle('active', playerSymbol === 'X');
-  pickO.classList.toggle('active', playerSymbol === 'O');
-}
+function setActiveChoice(){ if(!pickX || !pickO) return; pickX.classList.toggle('active', playerSymbol === 'X'); pickO.classList.toggle('active', playerSymbol === 'O'); }
 
 // ---------- picks ----------
-function onPick(sym){
-  if(sessionStarted) return;
-  if(sym === 'X'){ playerSymbol = 'X'; cpuSymbol = 'O'; }
-  else { playerSymbol = 'O'; cpuSymbol = 'X'; }
-  setActiveChoice();
-}
+function onPick(sym){ if(sessionStarted) return; if(sym === 'X'){ playerSymbol = 'X'; cpuSymbol = 'O'; } else { playerSymbol = 'O'; cpuSymbol = 'X'; } setActiveChoice(); }
 
 // ---------- tablero ----------
-function resetBoardUI(){
-  cells.forEach(c => { c.innerHTML = ''; c.classList.remove('disabled','win'); c.disabled = false; });
-}
+function resetBoardUI(){ cells.forEach(c => { c.innerHTML = ''; c.classList.remove('disabled','win'); c.disabled = false; }); }
 
 // ---------- juego ----------
 function startGame(){
@@ -250,8 +254,9 @@ function resetGame(){
     showFooterLogo();
   } else {
     sessionStarted = false;
+    // restart intro flow
     showIntroThenBanner();
-    message('Juego reiniciado. Esperá la presentación para continuar');
+    message('Juego reiniciado. Mostrando presentación...');
     hideFooterLogo();
   }
 }
