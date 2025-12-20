@@ -43,24 +43,45 @@ body{
   margin-bottom:12px;
 }
 
-/* cartel/banner con botón Comenzar incluido */
-.opponent-banner{
-  width:100%;
-  max-width:420px;
-  background:linear-gradient(90deg, rgba(6,182,212,0.06), rgba(6,182,212,0.03));
-  color:var(--accent);
-  padding:14px;
-  border-radius:12px;
+/* overlay cartel central */
+.overlay{
+  position:fixed;
+  inset:0;
   display:flex;
-  flex-direction:column;
   align-items:center;
-  gap:12px;
-  box-shadow: 0 8px 20px rgba(2,6,23,0.35);
+  justify-content:center;
+  background: rgba(2,6,23,0.6);
+  z-index:2000;
+  transition:opacity .22s ease;
 }
-.opponent-text{font-weight:700;letter-spacing:0.6px;}
-.banner-start{min-width:160px;padding:10px 16px;font-weight:700;}
+.overlay.hidden{display:none; opacity:0; pointer-events:none;}
 
-/* control-row pequeño para elegir pieza y reiniciar */
+.overlay-card{
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:12px;
+  padding:22px;
+  width:min(420px, 92%);
+  text-align:center;
+  box-shadow:0 16px 44px rgba(2,6,23,0.6);
+}
+.opponent-text{
+  color:var(--accent);
+  font-weight:800;
+  margin-bottom:12px;
+  font-size:1.05rem;
+}
+.banner-start{
+  min-width:160px;
+  padding:10px 16px;
+  font-weight:700;
+  background:var(--accent);
+  color:#042028;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+/* control-row pequeño */
 .control-row.small{
   display:flex;
   gap:8px;
@@ -70,7 +91,7 @@ body{
   border-radius:8px;
 }
 
-/* botones y estilos generales */
+/* botones */
 .choice{
   padding:6px 12px;
   background:transparent;
@@ -131,7 +152,7 @@ body{
 
 .legend{margin-top:16px;text-align:center;color:var(--muted);font-size:.9rem;}
 
-/* Modal styles (igual que antes) */
+/* Modal styles */
 .modal.hidden{display:none;}
 .modal{
   position:fixed;
@@ -140,7 +161,7 @@ body{
   align-items:center;
   justify-content:center;
   background:rgba(2,6,23,0.6);
-  z-index:2000;
+  z-index:3000;
 }
 .modal-content{
   background:var(--panel);
@@ -168,6 +189,6 @@ body{
   :root{ --cell-size: 86px; }
   .cell{ font-size: calc(var(--cell-size) * 0.62); }
   .modal-percent{font-size:36px}
-  .opponent-banner{padding:10px}
+  .overlay-card{padding:14px}
   .banner-start{min-width:140px}
 }
