@@ -57,7 +57,6 @@ h1{margin:0 0 14px 0;font-size:1.6rem;text-align:center;color:var(--accent);}
   color:inherit;border-radius:6px;cursor:pointer;
 }
 .choice.active{background:var(--accent);color:#022; font-weight:600;}
-select{background:transparent;color:inherit;border:1px solid rgba(255,255,255,0.06);padding:6px;border-radius:6px;}
 .primary{background:var(--accent);color:#022;padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:600;}
 #restartBtn{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.03);padding:6px 10px;border-radius:8px;cursor:pointer;}
 
