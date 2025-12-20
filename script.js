@@ -1,5 +1,8 @@
 // Tatetí - Jugador vs CPU
-// CPU ligeramente más fácil, siempre empieza el jugador, sin selector de dificultad.
+// Cambios:
+// - Dificultad oculta (no aparece en UI).
+// - "Comenzar" solo al principio; luego las partidas se inician automáticamente.
+// - Al completar 3 partidas se muestra modal con el bono final (100/150/200).
 
 // Constantes
 const WIN_COMBINATIONS = [
@@ -26,6 +29,10 @@ const playerBonusPercentEl = document.getElementById('playerBonusPercent');
 const cpuBonusPercentEl = document.getElementById('cpuBonusPercent');
 const playsLeftEl = document.getElementById('playsLeft');
 
+const resultModal = document.getElementById('resultModal');
+const modalMessage = document.getElementById('modalMessage');
+const modalClose = document.getElementById('modalClose');
+
 // Estado runtime
 let board = Array(9).fill(null);
 let playerSymbol = 'X';
@@ -33,6 +40,7 @@ let cpuSymbol = 'O';
 let currentTurn = 'X';
 let running = false;
 let cpuThinking = false;
+let sessionStarted = false; // indica si el ciclo de partidas fue iniciado
 
 // Estado persistente
 let state = { playerWins: 0, cpuWins: 0, plays: 0 };
@@ -84,20 +92,26 @@ function checkPlaysLimitUI(){
     startBtn.classList.add('disabled');
     message('Has alcanzado el máximo de 3 partidas por dispositivo.');
   } else {
-    startBtn.disabled = false;
-    startBtn.classList.remove('disabled');
+    // Si la sesión ya se inició, deshabilitamos igualmente el botón ("Comenzar" solo al principio)
+    if(sessionStarted){
+      startBtn.disabled = true;
+      startBtn.classList.add('disabled');
+    } else {
+      startBtn.disabled = false;
+      startBtn.classList.remove('disabled');
+    }
   }
 }
 
 // --- eventos UI ---
 pickX.addEventListener('click', ()=> {
-  if(running) return;
+  if(sessionStarted) return;
   playerSymbol = 'X';
   cpuSymbol = 'O';
   setActiveChoice();
 });
 pickO.addEventListener('click', ()=> {
-  if(running) return;
+  if(sessionStarted) return;
   playerSymbol = 'O';
   cpuSymbol = 'X';
   setActiveChoice();
@@ -107,6 +121,7 @@ startBtn.addEventListener('click', startGame);
 restartBtn.addEventListener('click', resetGame);
 
 cells.forEach(c => c.addEventListener('click', onCellClick));
+modalClose.addEventListener('click', hideModal);
 
 // --- juego ---
 function startGame(){
@@ -114,24 +129,33 @@ function startGame(){
     message('No puedes comenzar: alcanzaste el límite de 3 partidas por dispositivo.');
     return;
   }
+  // Marcar que la sesión de partidas empezó; desactivar start para el resto del ciclo
+  sessionStarted = true;
+  checkPlaysLimitUI();
+
+  // Iniciar la primera partida
   resetBoardUI();
   board = Array(9).fill(null);
   // Siempre empieza el jugador
   currentTurn = playerSymbol;
   running = true;
   message(`Juego iniciado — Tú: ${playerSymbol}  |  CPU: ${cpuSymbol}`);
-  // Si por alguna razón currentTurn fuese cpuSymbol (no debería), ejecutar CPU
-  if(currentTurn === cpuSymbol){
-    doCpuTurn();
-  }
 }
 
 function resetGame(){
+  // reinicia la partida actual (no altera el contador de plays ni victorias persistentes)
   running = false;
   cpuThinking = false;
   board = Array(9).fill(null);
   resetBoardUI();
-  message('Juego reiniciado. Presioná "Comenzar" para jugar');
+  // Si la sesión ya empezó, volver a iniciar la partida actual para que siga el ciclo
+  if(sessionStarted && state.plays < MAX_PLAYS){
+    currentTurn = playerSymbol;
+    running = true;
+    message('Partida reiniciada — continúa la serie');
+  } else {
+    message('Juego reiniciado. Presioná "Comenzar" para jugar');
+  }
 }
 
 function resetBoardUI(){
@@ -175,7 +199,7 @@ function doCpuTurn(){
   cpuThinking = true;
   message('CPU está pensando...');
   setTimeout(()=>{
-    const move = cpuEasierIntermediateMove();
+    const move = cpuEasierIntermediateMove(); // dificultad interna oculta
     if(move !== undefined && move !== null){
       makeMove(move, cpuSymbol);
     }
@@ -184,7 +208,7 @@ function doCpuTurn(){
   }, 420);
 }
 
-// CPU: un poquito más fácil que antes (probabilidad heurística reducida)
+// CPU interno (un poco más fácil)
 function cpuEasierIntermediateMove(){
   // 1) Si puede ganar, gana
   let move = findWinningMove(board, cpuSymbol);
@@ -192,12 +216,11 @@ function cpuEasierIntermediateMove(){
   // 2) Si el jugador puede ganar, bloquear
   move = findWinningMove(board, playerSymbol);
   if(move !== null) return move;
-  // 3) Heurística con probabilidad: centro/esquinas (45% prob — antes 60%)
+  // 3) Heurística con probabilidad: centro/esquinas (45% prob)
   if(Math.random() < 0.45){
     if(board[4] === null) return 4;
     const corners = [0,2,6,8].filter(i => board[i] === null);
     if(corners.length) return corners[Math.floor(Math.random()*corners.length)];
-    // si no hay esquinas, tomar un lateral
     const sides = [1,3,5,7].filter(i => board[i] === null);
     if(sides.length) return sides[Math.floor(Math.random()*sides.length)];
   }
@@ -248,10 +271,10 @@ function handleEnd(winner){
   } else {
     if(winner === playerSymbol){
       state.playerWins = Math.min(MAX_PLAYS, state.playerWins + 1);
-      message(`¡Ganaste! 🎉 Bono actual: ${bonusPercent(state.playerWins)}%`);
+      message(`¡Ganaste esta partida! 🎉`);
     } else {
       state.cpuWins = Math.min(MAX_PLAYS, state.cpuWins + 1);
-      message(`CPU gana 😢 — Bono CPU: ${bonusPercent(state.cpuWins)}%`);
+      message(`CPU gana esta partida 😢`);
     }
 
     // resaltar combos ganadoras
@@ -273,11 +296,44 @@ function handleEnd(winner){
   updateScoreboardUI();
   updatePlaysUI();
   checkPlaysLimitUI();
+
+  // Si aún quedan partidas, iniciar la siguiente automáticamente después de una pausa corta
+  if(state.plays < MAX_PLAYS){
+    setTimeout(()=>{
+      // preparar tablero nuevo y comenzar la siguiente (siempre jugador empieza)
+      board = Array(9).fill(null);
+      resetBoardUI();
+      currentTurn = playerSymbol;
+      running = true;
+      message(`Siguiente partida iniciada — Partida ${state.plays + 1} de ${MAX_PLAYS}`);
+    }, 900);
+  } else {
+    // serie finalizada: mostrar modal con bono alcanzado por el usuario
+    setTimeout(()=>{
+      const bp = bonusPercent(state.playerWins);
+      let text;
+      if(bp >= 100){
+        text = `La serie ha finalizado. Has ganado un bono de ${bp}% (${state.playerWins} victoria(s)).`;
+      } else {
+        text = `La serie ha finalizado. No obtuviste bono (0 victorias).`;
+      }
+      showModal(text);
+    }, 700);
+  }
 }
 
-// Permitir iniciar con Enter cuando el foco esté en controles
+// Modal helpers
+function showModal(text){
+  modalMessage.textContent = text;
+  resultModal.classList.remove('hidden');
+}
+function hideModal(){
+  resultModal.classList.add('hidden');
+}
+
+// Permitir iniciar con Enter cuando el foco esté en controles (solo si no se inició la sesión)
 document.addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter' && !running){
+  if(e.key === 'Enter' && !sessionStarted){
     startGame();
   }
 });
