@@ -141,3 +141,74 @@ body{
   .score-item strong{ font-size:0.85rem; }
   .intro-card img#introLogo{ max-width:56vw; }
 }
+
+/* ---------- Intro loading + tridentes atenuados + overlay/banner ---------- */
+
+/* Loading bar / texto (dentro de .intro-card bajo el logo) */
+.loading-bar-outer{
+  width:72%;
+  max-width:560px;
+  height:12px;
+  background: rgba(0,0,0,0.12);
+  border-radius:10px;
+  overflow:hidden;
+  margin-top:12px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  align-self:center;
+}
+.loading-bar{
+  height:100%;
+  width:0%;
+  background: linear-gradient(90deg, #ffd9b3, var(--orange-bright));
+  border-radius:8px;
+  transition: width .12s linear;
+}
+.loading-text{
+  margin-top:8px;
+  color:#fff;
+  font-weight:700;
+  text-align:center;
+  width:100%;
+  align-self:center;
+}
+
+/* Intro overlay / banner z-index (garantiza que el banner se muestre después de ocultar intro) */
+.intro-overlay{ z-index:2200; }
+.overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background: rgba(2,6,23,0.35); z-index:2000; }
+.overlay.hidden{ display:none; opacity:0; pointer-events:none; }
+
+/* Atento a los tridentes: más sutiles en todo el fondo */
+.bg-item.trident{
+  color: rgba(255,255,255,0.06); /* tono atenuado */
+  filter: blur(.2px);
+  mix-blend-mode: normal;
+  text-shadow: none;
+  pointer-events: none;
+}
+
+/* Emojis de fondo también más sutiles */
+.bg-item.emoji{
+  color: rgba(255,255,255,0.045);
+  filter: blur(.25px);
+  mix-blend-mode: normal;
+  pointer-events: none;
+}
+
+/* Intro particles container (asegura que las partículas estén sobre el fondo pero debajo del logo) */
+#introParticles{ position:absolute; inset:0; z-index:2195; pointer-events:none; }
+
+/* Asegurar que el contenido de la intro-card quede centrado y visible */
+.intro-card{
+  position:relative; /* para que #introParticles y la barra queden relativos a la tarjeta */
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+}
+
+/* Si necesitás que la barra destaque más en pantallas pequeñas */
+@media (max-width:480px){
+  .loading-bar-outer{ width:86%; height:10px; }
+  .loading-text{ font-size:0.9rem; }
+}
