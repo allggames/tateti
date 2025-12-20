@@ -142,21 +142,3 @@ body{
   .intro-card img#introLogo{ max-width:56vw; }
 }
 
-/* Fix: ensure intro loading elements sit under logo and centered */
-.intro-card{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:12px;
-  padding: 28px 20px;
-  max-height: calc(100vh - 120px);
-  box-sizing:border-box;
-}
-.loading-text{
-  margin: 0;
-  padding: 0;
-  font-weight:700;
-  color:#fff;
-  text-align:center;
-}
