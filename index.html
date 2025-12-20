@@ -11,18 +11,11 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- decorativo: iconos sutiles de fondo -->
+  <!-- decorativo: iconos sutiles de fondo (para la pantalla principal) -->
   <div class="bg-icons" aria-hidden="true">
-    <span>⭕</span>
-    <span>❌</span>
-    <span>🎁</span>
-    <span>✨</span>
-    <span>⭕</span>
-    <span>❌</span>
-    <span>🎁</span>
-    <span>✨</span>
-    <span>⭕</span>
-    <span>❌</span>
+    <span>⭕</span><span>❌</span><span>🎁</span><span>✨</span>
+    <span>⭕</span><span>❌</span><span>🎁</span><span>✨</span>
+    <span>⭕</span><span>❌</span>
   </div>
 
   <main class="container" id="app">
@@ -31,7 +24,6 @@
 
     <section class="controls">
       <div class="control-row small">
-        <!-- seleccion visual de pieza (sin label) -->
         <button id="pickX" class="choice active">❌</button>
         <button id="pickO" class="choice">⭕</button>
         <button id="restartBtn" class="secondary">Reiniciar</button>
@@ -73,16 +65,16 @@
     <footer class="legend" aria-hidden="true"></footer>
   </main>
 
-  <!-- INTRO: presentación con logo2 (aparece antes de todo) -->
+  <!-- INTRO: presentación con logo2 (aparece primero). Se auto-oculta y luego salta al cartel NEXUS -->
   <div id="introOverlay" class="intro-overlay" role="dialog" aria-modal="true" aria-label="Presentación">
     <div class="intro-card">
-      <!-- Ahora las imágenes se cargan desde la carpeta images/ -->
       <img id="introLogo" src="images/logo2.png" alt="Logo presentación" />
-      <button id="introContinue" class="primary intro-continue">Continuar</button>
     </div>
+    <!-- contenedor para partículas decorativas en el intro (opcional) -->
+    <div id="introParticles" class="intro-particles" aria-hidden="true"></div>
   </div>
 
-  <!-- Cartel central (overlay) con NEXUS + botón Comenzar -->
+  <!-- Cartel central (overlay) con NEXUS + botón Comenzar (se muestra tras Intro) -->
   <div id="opponentBanner" class="overlay hidden" role="dialog" aria-modal="true" aria-label="Cartel iniciar serie">
     <div class="overlay-card" role="region" aria-label="Oponente y comenzar">
       <div class="opponent-text">HOY JUGARÁS CONTRA NEXUS🤖</div>
