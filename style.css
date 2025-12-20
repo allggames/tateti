@@ -1,8 +1,7 @@
 :root{
   --bg-start: #FF9A3C;
   --bg-end:   #FF5E3A;
-  /* cartel más opaco/armonizado */
-  --overlay-solid: rgba(199,82,10,0.92); /* tono más sólido y acorde */
+  --overlay-solid: rgba(199,82,10,0.92);
   --panel-text: #ffffff;
   --accent:#06b6d4;
   --muted:#f1e9e2;
@@ -47,8 +46,6 @@ body{
   color: #ffffff;
   mix-blend-mode: overlay;
 }
-
-/* posiciones fijas (cambiar si querés otras ubicaciones) */
 .bg-icons span:nth-child(1){ left: 6%; top: 8%; font-size:120px; transform:rotate(-8deg); }
 .bg-icons span:nth-child(2){ right: 8%; top: 6%; font-size:140px; transform:rotate(6deg); }
 .bg-icons span:nth-child(3){ left: 12%; bottom: 10%; font-size:110px; transform:rotate(4deg); }
@@ -176,6 +173,32 @@ body{
 }
 .cell > span { font-size: 2.2rem; line-height:1; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.25)); }
 
+/* INTRO overlay (presentación con logo2) */
+.intro-overlay{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(2,6,23,0.45);
+  z-index:2200;
+}
+.intro-card{
+  background: linear-gradient(180deg, rgba(210,95,18,0.98), rgba(180,70,18,0.98));
+  padding:28px;
+  border-radius:14px;
+  text-align:center;
+  box-shadow:0 20px 48px rgba(120,40,10,0.4);
+  width:min(520px, 90%);
+}
+.intro-card img#introLogo{
+  max-width: 88%;
+  height:auto;
+  display:block;
+  margin: 8px auto 16px auto;
+}
+.intro-continue{ min-width:160px; padding:10px 18px; font-weight:800; background:#fff; color:var(--bg-end); border-radius:10px; border:none; }
+
 /* Overlay cartel central: MÁS SÓLIDO */
 .overlay{
   position:fixed;
@@ -189,8 +212,6 @@ body{
   pointer-events:auto;
 }
 .overlay.hidden{display:none; opacity:0; pointer-events:none;}
-
-/* overlay-card: ahora con tono naranja sólido y buen contraste */
 .overlay-card{
   background: linear-gradient(180deg, rgba(210,95,18,0.98), rgba(180,70,18,0.98));
   color: var(--panel-text);
@@ -201,25 +222,24 @@ body{
   box-shadow:0 18px 48px rgba(150,45,0,0.35);
   border: 1px solid rgba(255,255,255,0.06);
 }
-.opponent-text{
-  color:#fff;
-  font-weight:800;
-  margin-bottom:14px;
-  font-size:1.05rem;
-}
-.banner-start{
-  min-width:160px;
-  padding:12px 18px;
-  font-weight:800;
-  background: #fff;
-  color: var(--bg-end);
-  border-radius:10px;
-  border:none;
-  cursor:pointer;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-}
+.opponent-text{ color:#fff; font-weight:800; margin-bottom:14px; font-size:1.05rem; }
+.banner-start{ min-width:160px; padding:12px 18px; font-weight:800; background:#fff; color: var(--bg-end); border-radius:10px; border:none; cursor:pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
 
-/* Modal styles: caja ahora naranja en lugar de negra */
+/* Logo fijo inferior */
+.footer-logo{
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-height: 64px;
+  opacity: 0.95;
+  z-index: 15;
+  transition: transform .18s ease, opacity .18s;
+  pointer-events: none;
+}
+.footer-logo.hidden{ display: none; opacity: 0; pointer-events: none; }
+
+/* Modal styles: caja naranja */
 .modal.hidden{display:none;}
 .modal{
   position:fixed;
@@ -231,7 +251,6 @@ body{
   z-index:3000;
 }
 .modal-content{
-  /* nuevo fondo naranja (más oscuro para contraste con texto blanco) */
   background: linear-gradient(180deg, rgba(140,50,10,0.98), rgba(110,40,8,0.98));
   color: #fff;
   padding:22px;
@@ -243,28 +262,11 @@ body{
 }
 .modal-content h2{margin:0 0 10px;color:#fff}
 .modal-label{font-weight:800;margin:8px 0;color:rgba(255,255,255,0.95)}
-.modal-percent{
-  margin:6px auto 8px auto;
-  font-size:64px;
-  font-weight:900;
-  color: #fff5e6; /* ligeramente claro para destacar sobre naranja */
-  text-shadow: 0 6px 14px rgba(0,0,0,0.2);
-}
-/* aclaración: el % ya era naranja; si preferís que permanezca naranja brillante:
-   cambia .modal-percent color a var(--orange-bright) */
+.modal-percent{ margin:6px auto 8px auto; font-size:64px; font-weight:900; color: #fff5e6; text-shadow: 0 6px 14px rgba(0,0,0,0.2); }
 .modal-subtext{color:rgba(255,255,255,0.92);margin-bottom:6px}
 .modal-instruction{margin-top:8px;color:rgba(255,255,255,0.92);font-weight:700}
 .modal-actions{margin-top:12px;display:flex;justify-content:center;gap:8px}
-
-/* botón dentro del modal: blanco con texto naranja para buen contraste */
-.modal-content .primary{
-  background:#ffffff;
-  color: var(--bg-end);
-  padding:8px 14px;
-  border-radius:8px;
-  font-weight:700;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-}
+.modal-content .primary{ background:#ffffff; color: var(--bg-end); padding:8px 14px; border-radius:8px; font-weight:700; box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
 
 /* responsive */
 @media (max-width:480px){
@@ -273,7 +275,6 @@ body{
   .modal-percent{font-size:40px}
   .overlay-card{padding:14px}
   .banner-start{min-width:140px}
-  /* ajustar posiciones de algunos iconos para pantallas pequeñas */
-  .bg-icons span:nth-child(1){ left:4%; top:6%; }
-  .bg-icons span:nth-child(5){ left:44%; top:2%; font-size:120px; }
+  .intro-card{padding:16px}
+  .intro-card img#introLogo{ max-width: 94%; }
 }
