@@ -1,6 +1,6 @@
 // Tatetí - Jugador vs NEXUS (CPU)
 // Muy fácil: blockProb reducido a 0.30 y heurProb a 0.05.
-// Start sólo al principio; auto-inicio de partidas; modal final con bono.
+// Start incluido dentro del cartel/banner con NEXUS.
 
 // Config
 const cpuName = 'NEXUS';
@@ -47,7 +47,7 @@ let sessionStarted = false;
 let state = { playerWins: 0, cpuWins: 0, plays: 0 };
 
 // --- inicializar UI ---
-opponentBanner.textContent = `HOY JUGARÁS CONTRA ${cpuName}`;
+opponentBanner.querySelector('.opponent-text').textContent = `HOY JUGARÁS CONTRA ${cpuName}🤖`;
 
 // --- storage ---
 function loadState(){
@@ -206,19 +206,17 @@ function doCpuTurn(){
 }
 
 // CPU MUY FÁCIL (oculto):
-// - Bloquea al jugador con probabilidad blockProb (ahora 0.30).
+// - Bloquea al jugador con probabilidad blockProb (0.30 por defecto).
 // - Heurística muy rara (heurProb = 0.05). Resto aleatorio.
 function cpuVeryEasyMove(){
-  const blockProb = 0.30; // <<--- reducido para facilitar ganar a NEXUS
+  const blockProb = 0.30; // más bajo para facilitar ganar a NEXUS
   const heurProb = 0.05;
 
-  // 1) Si el jugador puede ganar en una jugada: bloquear con probabilidad blockProb
   const block = findWinningMove(board, playerSymbol);
   if(block !== null && Math.random() < blockProb){
     return block;
   }
 
-  // 2) Con baja probabilidad usar heurística (centro/esquinas)
   if(Math.random() < heurProb){
     if(board[4] === null) return 4;
     const corners = [0,2,6,8].filter(i => board[i] === null);
@@ -227,7 +225,6 @@ function cpuVeryEasyMove(){
     if(sides.length) return sides[Math.floor(Math.random()*sides.length)];
   }
 
-  // 3) Aleatorio (la mayoría de las veces)
   return cpuRandomMove();
 }
 
@@ -307,11 +304,13 @@ function handleEnd(winner){
   } else {
     setTimeout(()=>{
       const bp = bonusPercent(state.playerWins);
-      modalPercent.textContent = `${bp}%`;
+      const modalPercentEl = document.getElementById('modalPercent');
+      modalPercentEl.textContent = `${bp}%`;
+      const modalMsg = document.getElementById('modalMessage');
       if(bp > 0){
-        modalMessage.textContent = `Has obtenido ${bp}% por ${state.playerWins} victoria(s).`;
+        modalMsg.textContent = `Has obtenido ${bp}% por ${state.playerWins} victoria(s).`;
       } else {
-        modalMessage.textContent = `No obtuviste bono (0 victorias).`;
+        modalMsg.textContent = `No obtuviste bono (0 victorias).`;
       }
       showModal();
     }, 700);
