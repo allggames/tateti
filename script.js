@@ -1,8 +1,6 @@
 // Tatetí - Jugador vs CPU
-// Cambios:
-// - Dificultad oculta (no aparece en UI).
-// - "Comenzar" solo al principio; luego las partidas se inician automáticamente.
-// - Al completar 3 partidas se muestra modal con el bono final (100/150/200).
+// CPU en modo FÁCIL (oculto), "Comenzar" solo al principio, auto-inicio de partidas,
+// y modal final al completar las 3 partidas.
 
 // Constantes
 const WIN_COMBINATIONS = [
@@ -199,7 +197,7 @@ function doCpuTurn(){
   cpuThinking = true;
   message('CPU está pensando...');
   setTimeout(()=>{
-    const move = cpuEasierIntermediateMove(); // dificultad interna oculta
+    const move = cpuEasyMove(); // dificultad fácil oculta
     if(move !== undefined && move !== null){
       makeMove(move, cpuSymbol);
     }
@@ -208,23 +206,26 @@ function doCpuTurn(){
   }, 420);
 }
 
-// CPU interno (un poco más fácil)
-function cpuEasierIntermediateMove(){
-  // 1) Si puede ganar, gana
-  let move = findWinningMove(board, cpuSymbol);
-  if(move !== null) return move;
-  // 2) Si el jugador puede ganar, bloquear
-  move = findWinningMove(board, playerSymbol);
-  if(move !== null) return move;
-  // 3) Heurística con probabilidad: centro/esquinas (45% prob)
-  if(Math.random() < 0.45){
+// CPU en modo FÁCIL (oculto):
+// - Bloquea siempre si el jugador puede ganar en el siguiente movimiento.
+// - No intenta buscar su propia victoria.
+// - Con baja probabilidad hace una jugada heurística (centro/esquina).
+// - En la mayoría de los casos elige aleatorio.
+function cpuEasyMove(){
+  // 1) Si el jugador puede ganar en el siguiente movimiento, bloquear (siempre)
+  let block = findWinningMove(board, playerSymbol);
+  if(block !== null) return block;
+
+  // 2) (Opcional) con baja probabilidad usar heurística (centro/esquinas)
+  if(Math.random() < 0.20){
     if(board[4] === null) return 4;
     const corners = [0,2,6,8].filter(i => board[i] === null);
     if(corners.length) return corners[Math.floor(Math.random()*corners.length)];
     const sides = [1,3,5,7].filter(i => board[i] === null);
     if(sides.length) return sides[Math.floor(Math.random()*sides.length)];
   }
-  // 4) Random
+
+  // 3) Movimiento aleatorio
   return cpuRandomMove();
 }
 
