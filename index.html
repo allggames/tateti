@@ -12,17 +12,17 @@
     <p class="subtitle">Veamos que bono conseguis hoy🏃🏽‍♂️💨</p>
 
     <section class="controls">
-      <div id="opponentBanner" class="opponent-banner">HOY JUGARÁS CONTRA NEXUS</div>
+      <!-- Cartel con NEXUS + botón Comenzar -->
+      <div id="opponentBanner" class="opponent-banner" role="region" aria-label="Oponente">
+        <div class="opponent-text">HOY JUGARÁS CONTRA NEXUS🤖</div>
+        <button id="startBtn" class="primary banner-start">Comenzar</button>
+      </div>
 
-      <div class="control-row">
+      <div class="control-row small">
         <label>Elegir pieza:</label>
         <button id="pickX" class="choice active">X</button>
         <button id="pickO" class="choice">O</button>
-      </div>
-
-      <div class="control-row">
-        <button id="startBtn" class="primary">Comenzar</button>
-        <button id="restartBtn">Reiniciar</button>
+        <button id="restartBtn" class="secondary">Reiniciar</button>
       </div>
     </section>
 
@@ -58,7 +58,6 @@
       </div>
     </section>
 
-    <!-- Footer vacío y oculto a lectores de pantalla -->
     <footer class="legend" aria-hidden="true"></footer>
   </main>
 
