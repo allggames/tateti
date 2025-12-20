@@ -1,13 +1,9 @@
-// script.js (editado y estable)
-// Objetivos cumplidos:
-// - Intro con logo + tridentes/emoji atenuados en el fondo.
-// - Barra de carga animada con porcentaje debajo del logo (usa los elementos del HTML si existen).
-// - Cuando termina la carga: oculta intro y MUESTRA el cartel "HOY JUGARÁS CONTRA NEXUS" con botón "Comenzar" (NO hay auto-start).
-// - El juego comienza cuando el usuario hace click en "Comenzar".
-// - Mantiene la lógica del juego (partidas, CPU, marcador, bono mostrado sólo al final).
-// - Más defensas para evitar que errores rompan el flujo (logs en consola).
+// script.js (versión final ajustada)
+// - Intro con tridentes/emoji atenuados + barra de carga
+// - Al terminar la carga: oculta intro y muestra cartel "HOY JUGARÁS CONTRA NEXUS" (espera click)
+// - El modal "Resultado final" aparecerá únicamente cuando se completaron las 3 partidas (MAX_PLAYS).
+// - Lógica del juego (partidas, CPU, etc.) intacta.
 
-/* ---------- Config / Estado ---------- */
 const cpuName = 'NEXUS';
 const WIN_COMBINATIONS = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -16,7 +12,7 @@ const WIN_COMBINATIONS = [
 ];
 const MAX_PLAYS = 3;
 const STORAGE_KEY = 'tatetiState_v2';
-const INTRO_DURATION = 1600; // ms
+const INTRO_DURATION = 1600;
 
 let board = Array(9).fill(null);
 let playerSymbol = 'X';
@@ -27,7 +23,7 @@ let cpuThinking = false;
 let sessionStarted = false;
 let state = { playerWins:0, cpuWins:0, plays:0 };
 
-/* ---------- DOM refs (se llenan en init) ---------- */
+// DOM refs
 let boardEl, cells, messageEl;
 let introOverlay, introCard, introParticles;
 let loadingBar, loadingText;
@@ -36,13 +32,12 @@ let playerWinsEl, cpuWinsEl, playerBonusPercentEl, cpuBonusPercentEl, playsLeftE
 let resultModal, modalPercent, modalMessage, modalClose;
 let boardLogo, bgTridents, bgEmojis;
 
-/* ---------- Helpers ---------- */
 function by(id){ return document.getElementById(id); }
-function dbg(...args){ console.debug('[tateti]', ...args); }
+function dbg(...a){ console.debug('[tateti]', ...a); }
 function symbolToEmoji(s){ return s === 'X' ? '❌' : (s === 'O' ? '⭕' : s); }
 function message(txt){ if(messageEl) messageEl.textContent = txt; }
 
-/* ---------- Background (global) ---------- */
+/* ---------------- Background ---------------- */
 function createBgLayer(id){
   let el = by(id);
   if(!el){
@@ -56,30 +51,25 @@ function createBgLayer(id){
   }
   return el;
 }
-
 function populateBackground(){
-  // utiliza los contenedores presentes en HTML (los creamos si faltan)
   bgTridents = createBgLayer('bgTridents');
   bgEmojis = createBgLayer('bgEmojis');
   bgTridents.innerHTML = '';
   bgEmojis.innerHTML = '';
-
   const W = Math.max(window.innerWidth, 800);
   const H = Math.max(window.innerHeight, 600);
 
-  // colocador con separación básica
   function place(container, count, factory, minDist = 60){
     const placed = [];
     const padding = 24;
     for(let i=0;i<count;i++){
-      let attempts = 0;
-      let x,y,ok;
+      let attempts = 0, x, y, ok;
       do {
         x = Math.random() * (W - padding*2) + padding;
         y = Math.random() * (H - padding*2) + padding;
         ok = true;
         for(const p of placed){
-          if(Math.hypot(p.x-x, p.y-y) < minDist){ ok = false; break; }
+          if(Math.hypot(p.x-x,p.y-y) < minDist){ ok = false; break; }
         }
         attempts++;
       } while(!ok && attempts < 40);
@@ -93,7 +83,6 @@ function populateBackground(){
     }
   }
 
-  // tridentes atenuados
   const trCount = Math.round(Math.max(8, Math.min(24, (W*H)/180000)));
   place(bgTridents, trCount, () => {
     const n = document.createElement('div');
@@ -106,7 +95,6 @@ function populateBackground(){
     return n;
   }, 60);
 
-  // emojis sutiles
   const emojis = ['⭕','❌','🎁','✨'];
   const emCount = Math.round(Math.max(10, Math.min(22, (W*H)/150000)));
   place(bgEmojis, emCount, () => {
@@ -124,7 +112,7 @@ function populateBackground(){
   bgEmojis.style.zIndex = 0;
 }
 
-/* ---------- Intro particles & loading UI ---------- */
+/* ---------------- Intro UI & particles ---------------- */
 function ensureIntroElements(){
   introOverlay = introOverlay || by('introOverlay');
   if(!introOverlay) return false;
@@ -143,7 +131,6 @@ function ensureIntroElements(){
   loadingBar = by('loadingBar');
   loadingText = by('loadingText');
 
-  // si HTML ya tiene loadingBar/loadingText no los tocamos, si no, los creamos (fallback)
   if(!loadingBar || !loadingText){
     const outer = document.createElement('div');
     outer.className = 'loading-bar-outer';
@@ -255,7 +242,7 @@ function attachStartListener(){
 function showBanner(){ const b = by('opponentBanner'); if(!b) return; b.classList.remove('hidden'); b.setAttribute('aria-hidden','false'); }
 function hideBanner(){ const b = by('opponentBanner'); if(!b) return; b.classList.add('hidden'); b.setAttribute('aria-hidden','true'); }
 
-/* ---------- Flow: intro -> loading -> show banner (WAIT for click) ---------- */
+/* ---------- Intro flow (no auto-start) ---------- */
 async function showIntroThenProceed(){
   introOverlay = introOverlay || by('introOverlay');
   introCard = introCard || (introOverlay && introOverlay.querySelector('.intro-card'));
@@ -266,66 +253,48 @@ async function showIntroThenProceed(){
     return;
   }
 
-  // show intro & populate backgrounds
   introOverlay.classList.remove('hidden');
   introOverlay.setAttribute('aria-hidden','false');
+
   populateBackground();
   populateIntroParticles();
 
-  // animate loading
-  try {
-    await animateLoading(INTRO_DURATION);
-  } catch(e){
-    console.error('animateLoading', e);
-  }
+  try { await animateLoading(INTRO_DURATION); } catch(e){ console.error('animateLoading err', e); }
 
-  // hide intro and show banner (no auto-start)
   introOverlay.classList.add('hidden');
   introOverlay.setAttribute('aria-hidden','true');
+
   attachStartListener();
   showBanner();
-  dbg('Intro finished - waiting for user to press "Comenzar"');
+  dbg('Intro finished; banner shown waiting for user');
 }
 
 /* ---------- Init ---------- */
 document.addEventListener('DOMContentLoaded', async ()=>{
   // refs
-  boardEl = by('board');
-  cells = Array.from(document.querySelectorAll('.cell'));
-  messageEl = by('message');
+  boardEl = by('board'); cells = Array.from(document.querySelectorAll('.cell')); messageEl = by('message');
 
-  introOverlay = by('introOverlay');
-  introCard = introOverlay ? introOverlay.querySelector('.intro-card') : null;
+  introOverlay = by('introOverlay'); introCard = introOverlay ? introOverlay.querySelector('.intro-card') : null;
 
-  opponentBanner = by('opponentBanner');
-  startBtn = by('startBtn');
-  restartBtn = by('restartBtn');
-  pickX = by('pickX'); pickO = by('pickO');
+  opponentBanner = by('opponentBanner'); startBtn = by('startBtn'); restartBtn = by('restartBtn'); pickX = by('pickX'); pickO = by('pickO');
 
-  playerWinsEl = by('playerWins'); cpuWinsEl = by('cpuWins');
-  playerBonusPercentEl = by('playerBonusPercent'); cpuBonusPercentEl = by('cpuBonusPercent');
-  playsLeftEl = by('playsLeft');
+  playerWinsEl = by('playerWins'); cpuWinsEl = by('cpuWins'); playerBonusPercentEl = by('playerBonusPercent'); cpuBonusPercentEl = by('cpuBonusPercent'); playsLeftEl = by('playsLeft');
 
   resultModal = by('resultModal'); modalPercent = by('modalPercent'); modalMessage = by('modalMessage'); modalClose = by('modalClose');
-
   boardLogo = by('boardLogo');
 
-  if(!boardEl || !cells.length || !messageEl){
-    console.error('FATAL: elementos del tablero faltantes.');
-    return;
-  }
+  if(!boardEl || !cells.length || !messageEl){ console.error('FATAL: elementos faltantes'); return; }
 
-  // UI listeners
   if(pickX) pickX.addEventListener('click', ()=> onPick('X'));
   if(pickO) pickO.addEventListener('click', ()=> onPick('O'));
   if(restartBtn) restartBtn.addEventListener('click', resetGame);
-  if(modalClose) modalClose.addEventListener('click', hideModal);
+  if(modalClose) modalClose.addEventListener('click', ()=> { hideModal(); /* keep modal hidden until final */ });
+
   cells.forEach(c => c.addEventListener('click', onCellClick));
 
   document.addEventListener('keydown', (e)=> {
     if(e.key === 'Enter' && !sessionStarted && opponentBanner && !opponentBanner.classList.contains('hidden')){
-      hideBanner();
-      startGame();
+      hideBanner(); startGame();
     }
   });
 
@@ -333,10 +302,15 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   loadState();
   resetBoardUI();
 
+  // If already reached the plays limit, show modal (result) and hide intro/banner
   if(state.plays >= MAX_PLAYS){
     if(introOverlay) introOverlay.classList.add('hidden');
     hideBanner();
-    hideBoardLogo();
+    // show result modal with bonus (user said result box only after full series)
+    const bp = bonusPercent(state.playerWins);
+    if(modalPercent) modalPercent.textContent = `${bp}%`;
+    if(modalMessage) modalMessage.textContent = (bp>0)?`Has obtenido ${bp}% por ${state.playerWins} victoria(s).`:`No obtuviste bono (0 victorias).`;
+    if(resultModal) resultModal.classList.remove('hidden');
   } else {
     await showIntroThenProceed();
   }
@@ -345,16 +319,19 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   dbg('Init complete');
 });
 
-/* ---------- Juego: lógica (sin cambios funcionales) ---------- */
+/* ---------- Game logic (igual) ---------- */
 function showBoardLogo(){ if(!boardLogo) return; boardLogo.classList.remove('hidden'); boardLogo.style.display='block'; }
 function hideBoardLogo(){ if(!boardLogo) return; boardLogo.classList.add('hidden'); boardLogo.style.display='none'; }
 
 function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw) state = JSON.parse(raw); }catch(e){ state={playerWins:0,cpuWins:0,plays:0}; } updateScoreboardUI(); updatePlaysUI(); checkPlaysLimitUI(); }
 function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
+
 function updateScoreboardUI(){ if(playerWinsEl) playerWinsEl.textContent = `${state.playerWins} / ${MAX_PLAYS}`; if(cpuWinsEl) cpuWinsEl.textContent = `${state.cpuWins} / ${MAX_PLAYS}`; if(playerBonusPercentEl) playerBonusPercentEl.textContent = `Bono: ${bonusPercent(state.playerWins)}%`; if(cpuBonusPercentEl) cpuBonusPercentEl.textContent = `Bono: ${bonusPercent(state.cpuWins)}%`; }
 function updatePlaysUI(){ if(playsLeftEl) playsLeftEl.textContent = Math.max(0, MAX_PLAYS - state.plays); }
 function bonusPercent(w){ if(w<=0) return 0; if(w===1) return 100; if(w===2) return 150; return 200; }
+
 function checkPlaysLimitUI(){ if(!startBtn) return; if(state.plays >= MAX_PLAYS){ startBtn.disabled=true; startBtn.classList.add('disabled'); message('Has alcanzado el máximo de 3 partidas.'); hideBanner(); if(introOverlay) introOverlay.classList.add('hidden'); hideBoardLogo(); } else { if(sessionStarted){ startBtn.disabled=true; startBtn.classList.add('disabled'); } else { startBtn.disabled=false; startBtn.classList.remove('disabled'); } } }
+
 function setActiveChoice(){ if(!pickX||!pickO) return; pickX.classList.toggle('active', playerSymbol==='X'); pickO.classList.toggle('active', playerSymbol==='O'); }
 function onPick(sym){ if(sessionStarted) return; if(sym==='X'){ playerSymbol='X'; cpuSymbol='O'; } else { playerSymbol='O'; cpuSymbol='X'; } setActiveChoice(); }
 function resetBoardUI(){ cells.forEach(c=>{ c.innerHTML=''; c.classList.remove('disabled','win'); c.disabled=false; }); }
@@ -372,6 +349,59 @@ function cpuRandomMove(){ const avail = availableMoves(board); if(avail.length==
 function availableMoves(b){ return b.map((v,i)=> v===null?i:null).filter(v=>v!==null); }
 function findWinningMove(b,sym){ for(const i of availableMoves(b)){ b[i]=sym; const w=checkWinner(b); b[i]=null; if(w===sym) return i; } return null; }
 function checkWinner(b){ for(const [a,b1,c] of WIN_COMBINATIONS){ if(b[a] && b[a]===b[b1] && b[a]===b[c]) return b[a]; } if(b.every(v=>v!==null)) return 'D'; return null; }
-function handleEnd(w){ running=false; if(state.plays < MAX_PLAYS) state.plays += 1; if(w==='D') message('Empate 🙃 — no hay bono adicional'); else { if(w===playerSymbol){ state.playerWins=Math.min(MAX_PLAYS, state.playerWins+1); message('¡Ganaste esta partida! 🎉'); } else { state.cpuWins=Math.min(MAX_PLAYS, state.cpuWins+1); message(`${cpuName} gana esta partida 😢`); } for(const [a,b,c] of WIN_COMBINATIONS){ if(board[a] && board[a]===board[b] && board[a]===board[c]){ if(cells[a]) cells[a].classList.add('win'); if(cells[b]) cells[b].classList.add('win'); if(cells[c]) cells[c].classList.add('win'); break; } } } cells.forEach(c=>c.classList.add('disabled')); saveState(); updateScoreboardUI(); updatePlaysUI(); checkPlaysLimitUI(); if(state.plays < MAX_PLAYS){ setTimeout(()=>{ board=Array(9).fill(null); resetBoardUI(); currentTurn=playerSymbol; running=true; message(`Siguiente partida iniciada — Partida ${state.plays + 1} de ${MAX_PLAYS}`); showBoardLogo(); }, 900); } else { setTimeout(()=>{ const bp = bonusPercent(state.playerWins); if(modalPercent) modalPercent.textContent = `${bp}%`; if(modalMessage) modalMessage.textContent = (bp>0)?`Has obtenido ${bp}% por ${state.playerWins} victoria(s).`:`No obtuviste bono (0 victorias).`; showModal(); hideBoardLogo(); }, 700); } }
+
+function handleEnd(winner){
+  running=false;
+  if(state.plays < MAX_PLAYS) state.plays += 1;
+
+  if(winner === 'D'){
+    message('Empate 🙃 — no hay bono adicional');
+  } else {
+    if(winner === playerSymbol){
+      state.playerWins = Math.min(MAX_PLAYS, state.playerWins + 1);
+      message('¡Ganaste esta partida! 🎉');
+    } else {
+      state.cpuWins = Math.min(MAX_PLAYS, state.cpuWins + 1);
+      message(`${cpuName} gana esta partida 😢`);
+    }
+    // resaltar línea ganadora
+    for(const [a,b,c] of WIN_COMBINATIONS){
+      if(board[a] && board[a] === board[b] && board[a] === board[c]){
+        if(cells[a]) cells[a].classList.add('win');
+        if(cells[b]) cells[b].classList.add('win');
+        if(cells[c]) cells[c].classList.add('win');
+        break;
+      }
+    }
+  }
+
+  cells.forEach(c=>c.classList.add('disabled'));
+  saveState();
+  updateScoreboardUI();
+  updatePlaysUI();
+  checkPlaysLimitUI();
+
+  if(state.plays < MAX_PLAYS){
+    setTimeout(()=> {
+      board = Array(9).fill(null);
+      resetBoardUI();
+      currentTurn = playerSymbol;
+      running = true;
+      message(`Siguiente partida iniciada — Partida ${state.plays + 1} de ${MAX_PLAYS}`);
+      showBoardLogo();
+    }, 900);
+  } else {
+    // Serie finalizada: mostramos modal de resultado (solo aquí)
+    setTimeout(()=> {
+      const bp = bonusPercent(state.playerWins);
+      if(modalPercent) modalPercent.textContent = `${bp}%`;
+      if(modalMessage) modalMessage.textContent = (bp>0) ? `Has obtenido ${bp}% por ${state.playerWins} victoria(s).` : `No obtuviste bono (0 victorias).`;
+      if(resultModal) resultModal.classList.remove('hidden');
+      hideBoardLogo();
+    }, 700);
+  }
+}
+
 function showModal(){ if(resultModal) resultModal.classList.remove('hidden'); }
 function hideModal(){ if(resultModal) resultModal.classList.add('hidden'); }
+
