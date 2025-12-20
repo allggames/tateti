@@ -1,9 +1,12 @@
-// script.js
-// Actualizado: genera tridentes y emojis de fondo en posiciones aleatorias,
-// evita amontonamientos (aleatorio con separación básica), y muestra el logo
-// del tablero debajo del grid (boardLogo). Mantiene la lógica del juego.
+// script.js (editado)
+// Mejoras principales:
+// - populateBackground ahora usa la función placeItems para evitar amontonamientos
+//   y agrega los elementos dentro de #bgTridents y #bgEmojis (no al body).
+// - los elementos de fondo usan clases diferenciadas ('trident' / 'emoji') y estilos
+//   inline para tamaño/rotación/opacidad.
+// - limpieza y pequeñas defensas al regenerar el fondo en resize.
+// - mantiene la lógica del juego tal como la tenías.
 
-// --- Config / Estado (sin cambios funcionales) ---
 const cpuName = 'NEXUS';
 const WIN_COMBINATIONS = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -37,10 +40,15 @@ function symbolToEmoji(sym){
   return sym;
 }
 
+// Debounce helper
+function debounce(fn, wait=120){
+  let t;
+  return (...args)=>{ clearTimeout(t); t = setTimeout(()=>fn(...args), wait); };
+}
+
 // --- random background generation ---
-// basic collision-avoid algorithm: try up to N times per item to find position not too close to others
+// placeItems: coloca 'count' elementos mediante createElementFactory, evitando colisiones
 function populateBackground(){
-  // containers
   bgTridents = document.getElementById('bgTridents');
   bgEmojis = document.getElementById('bgEmojis');
   if(!bgTridents || !bgEmojis) return;
@@ -49,88 +57,85 @@ function populateBackground(){
   bgTridents.innerHTML = '';
   bgEmojis.innerHTML = '';
 
-  const W = window.innerWidth;
-  const H = window.innerHeight;
+  const W = Math.max(window.innerWidth, 800);
+  const H = Math.max(window.innerHeight, 600);
 
-  // helper to create non-clustered positions
-  function placeItems(count, createEl, minDist = 80, maxAttempts = 30){
+  // helper: test distance from existing points
+  function tooClose(x,y,placed,minDist){
+    for(const p of placed){
+      const dx = p.x - x;
+      const dy = p.y - y;
+      if(Math.hypot(dx,dy) < minDist) return true;
+    }
+    return false;
+  }
+
+  // generic placer
+  function placeItems(count, minDist, createNode, container){
     const placed = [];
+    const padding = 24;
     for(let i=0;i<count;i++){
       let attempts = 0;
-      let x,y,ok;
+      let x = 0, y = 0;
       do {
-        x = Math.random() * (W - 40) + 20; // padding
-        y = Math.random() * (H - 40) + 20;
-        ok = true;
-        for(const p of placed){
-          const dx = p.x - x;
-          const dy = p.y - y;
-          if(Math.hypot(dx,dy) < minDist){ ok = false; break; }
-        }
+        x = Math.random() * (W - padding*2) + padding;
+        y = Math.random() * (H - padding*2) + padding;
         attempts++;
-      } while(!ok && attempts < maxAttempts);
+      } while(tooClose(x,y,placed,minDist) && attempts < 40);
       placed.push({x,y});
-      const el = createEl(x,y,i);
-      document.body.appendChild(el); // temporarily append to body to allow positioning relative to viewport
+      const node = createNode(x,y,i);
+      // absolute positioned element inside container (container is fixed inset:0)
+      node.style.position = 'absolute';
+      node.style.left = `${x}px`;
+      node.style.top = `${y}px`;
+      node.style.pointerEvents = 'none';
+      container.appendChild(node);
     }
     return placed;
   }
 
-  // create trident elements (small, subtle)
-  const tridentCount = Math.round(Math.max(10, Math.min(24, (W*H)/(160000)))); // scale with viewport
-  for(let i=0;i<tridentCount;i++){
-    // choose size and opacity
-    const size = Math.round(10 + Math.random()*18); // 10-28px
-    const opacity = 0.05 + Math.random()*0.07; // 0.05-0.12
-    let x = Math.random() * (W - 40) + 20;
-    let y = Math.random() * (H - 40) + 20;
+  // create trident nodes
+  const tridentCount = Math.round(Math.max(8, Math.min(22, (W*H)/(200000))));
+  placeItems(tridentCount, 90, (x,y,i) => {
+    const size = 10 + Math.floor(Math.random()*20); // 10-30px
+    const opacity = (0.04 + Math.random()*0.08).toFixed(3); // 0.04-0.12
+    const rot = (-12 + Math.random()*24).toFixed(1);
     const span = document.createElement('div');
-    span.className = 'bg-item';
+    span.className = 'bg-item trident';
     span.textContent = '🔱';
-    span.style.left = `${x}px`;
-    span.style.top = `${y}px`;
     span.style.fontSize = `${size}px`;
-    span.style.opacity = `${opacity}`;
-    span.style.transform = `rotate(${(-12 + Math.random()*24).toFixed(1)}deg)`;
-    span.style.zIndex = 1;
-    bgTridents.appendChild(span);
-  }
+    span.style.opacity = opacity;
+    span.style.transform = `rotate(${rot}deg)`;
+    span.style.zIndex = 0;
+    span.style.filter = 'blur(.2px)';
+    return span;
+  }, bgTridents);
 
-  // create emoji background elements (⭕ ❌ 🎁 ✨) scattered
+  // create emoji nodes
   const emojis = ['⭕','❌','🎁','✨'];
-  const emojiCount = Math.round(Math.max(10, Math.min(22, (W*H)/(140000))));
-  for(let i=0;i<emojiCount;i++){
-    const size = Math.round(18 + Math.random()*36); // 18-54
-    const opacity = 0.04 + Math.random()*0.06; // 0.04-0.10
-    const x = Math.random() * (W - 60) + 30;
-    const y = Math.random() * (H - 60) + 30;
+  const emojiCount = Math.round(Math.max(10, Math.min(20, (W*H)/(180000))));
+  placeItems(emojiCount, 80, (x,y,i) => {
+    const size = 16 + Math.floor(Math.random()*38); // 16-54
+    const opacity = (0.03 + Math.random()*0.08).toFixed(3); // 0.03-0.11
+    const rot = (-25 + Math.random()*50).toFixed(1);
     const span = document.createElement('div');
-    span.className = 'bg-item';
+    span.className = 'bg-item emoji';
     span.textContent = emojis[Math.floor(Math.random()*emojis.length)];
-    span.style.left = `${x}px`;
-    span.style.top = `${y}px`;
     span.style.fontSize = `${size}px`;
-    span.style.opacity = `${opacity}`;
-    span.style.transform = `rotate(${(-20 + Math.random()*40).toFixed(1)}deg)`;
-    span.style.zIndex = 1;
-    bgEmojis.appendChild(span);
-  }
+    span.style.opacity = opacity;
+    span.style.transform = `rotate(${rot}deg)`;
+    span.style.zIndex = 0;
+    span.style.filter = 'blur(.25px)';
+    return span;
+  }, bgEmojis);
 
-  // small optimization: move these bg-layers to front or back by z-index if needed
+  // ensure bg layers are behind main container (they are fixed with z-index 0)
   bgTridents.style.zIndex = 0;
   bgEmojis.style.zIndex = 0;
 }
 
-// Debounce helper
-function debounce(fn, wait=120){
-  let t;
-  return (...args)=>{ clearTimeout(t); t = setTimeout(()=>fn(...args), wait); };
-}
-
-// --- Game code (keeps previous robust logic) ---
-// NOTE: adapted to use boardLogo element (below board) for showing/hiding instead of footerLogo
-
-// DOM ready init
+// --- Game code (robust) ---
+// Initialize on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
   boardEl = document.getElementById('board');
   cells = Array.from(document.querySelectorAll('.cell'));
@@ -169,8 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // populate background initially
   populateBackground();
   // regenerate on resize (debounced)
-  window.addEventListener('resize', debounce(()=> {
-    // clear containers before regenerate
+  window.addEventListener('resize', debounce(()=>{
     if(bgTridents) bgTridents.innerHTML = '';
     if(bgEmojis) bgEmojis.innerHTML = '';
     populateBackground();
@@ -203,9 +207,9 @@ document.addEventListener('DOMContentLoaded', () => {
     showIntroThenBanner();
   }
 
-  // Ensure start btn listener
   attachStartListener();
 
+  // debug
   console.debug('Background populated and init done');
 });
 
@@ -454,3 +458,4 @@ function hideModal(){ if(resultModal) resultModal.classList.add('hidden'); }
 // utilities
 function message(text){ if(messageEl) messageEl.textContent = text; }
 function bonusPercent(wins){ if(wins<=0) return 0; if(wins===1) return 100; if(wins===2) return 150; return 200; }
+
