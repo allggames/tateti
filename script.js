@@ -235,25 +235,27 @@ function attachStartListener(){
 function showBanner(){ const b = by('opponentBanner'); if(!b) return; b.classList.remove('hidden'); b.setAttribute('aria-hidden','false'); }
 function hideBanner(){ const b = by('opponentBanner'); if(!b) return; b.classList.add('hidden'); b.setAttribute('aria-hidden','true'); }
 
+// Reemplaza la función showIntroThenProceed en script.js por esta versión
 async function showIntroThenProceed(){
   introOverlay = introOverlay || by('introOverlay');
   introCard = introCard || (introOverlay && introOverlay.querySelector('.intro-card'));
 
   if(!introOverlay){
-    // No hay intro -> mostrar banner y comenzar
+    // Si no hay overlay, mostramos el banner para mantener flujo
     attachStartListener();
     showBanner();
-    startGame();
     return;
   }
 
   // Mostrar intro y partículas
   introOverlay.classList.remove('hidden');
   introOverlay.setAttribute('aria-hidden','false');
-  populateBackground();
-  populateIntroParticles();
 
-  // Ejecutar animación de carga
+  // Asegurar fondo y partículas
+  try { populateBackground(); } catch(e){ dbg('populateBackground error', e); }
+  try { populateIntroParticles(); } catch(e){ dbg('populateIntroParticles error', e); }
+
+  // Animar la barra de carga
   try {
     await animateLoading(INTRO_DURATION);
   } catch(e){
@@ -264,25 +266,11 @@ async function showIntroThenProceed(){
   introOverlay.classList.add('hidden');
   introOverlay.setAttribute('aria-hidden','true');
 
-  // Mostrar banner y forzar inicio (fallback)
-  attachStartListener();
+  // Mostrar cartel del oponente y esperar que el usuario presione "Comenzar"
+  attachStartListener(); // habilita/asegura el listener del botón
   showBanner();
 
-  // Esperamos un instante para que el usuario vea el banner, luego forzamos start
-  setTimeout(()=>{
-    if(startBtn && typeof startBtn.click === 'function'){
-      try{
-        startBtn.click();
-        dbg('startBtn clicked programmatically');
-      } catch(err){
-        dbg('startBtn.click failed, calling startGame()', err);
-        startGame();
-      }
-    } else {
-      // Si no existe el botón por alguna razón, arrancamos directamente
-      startGame();
-    }
-  }, 600);
+  dbg('Intro finalizado — mostrando banner. Esperando que el usuario presione "Comenzar".');
 }
 
 // ------------------- Populate intro particles (in overlay) -------------------
