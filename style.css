@@ -1,8 +1,8 @@
 :root{
   --bg-start: #FF9A3C;
   --bg-end:   #FF5E3A;
-  --panel-solid: #ffffff; /* banner card sólido */
-  --panel-text: #2b2b2b;
+  --overlay-solid: rgba(255,122,0,0.14); /* nuevo fondo del cartel, tono cálido */
+  --panel-text: #ffffff;
   --accent:#06b6d4;
   --muted:#f1e9e2;
   --win:#16a34a;
@@ -162,9 +162,9 @@ body{
 }
 .overlay.hidden{display:none; opacity:0; pointer-events:none;}
 
-/* overlay-card now WITH SOLID BACKGROUND */
+/* overlay-card ahora con fondo COORDINADO (no blanco) */
 .overlay-card{
-  background: var(--panel-solid); /* SOLIDO */
+  background: var(--overlay-solid); /* tono cálido semisólido */
   color: var(--panel-text);
   border-radius:12px;
   padding:26px;
@@ -173,7 +173,7 @@ body{
   box-shadow:0 16px 44px rgba(0,0,0,0.25);
 }
 .opponent-text{
-  color: var(--panel-text);
+  color:#fff;
   font-weight:800;
   margin-bottom:14px;
   font-size:1.05rem;
