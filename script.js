@@ -1,5 +1,6 @@
 // Tatetí - Jugador vs NEXUS (CPU)
-// Versión corregida y más robusta: evita errores DOM y asegura que los botones funcionen.
+// Versión actualizada: por defecto NEXUS = ⭕ (cpu 'O') y USUARIO = ❌ (player 'X').
+// Robusta: inicializa en DOMContentLoaded, listeners defensivos y manejo del banner sólido.
 
 // Config
 const cpuName = 'NEXUS';
@@ -13,8 +14,9 @@ const STORAGE_KEY = 'tatetiState_v2';
 
 // Estado runtime y persistente
 let board = Array(9).fill(null);
-let playerSymbol = 'O'; // por defecto: ⭕ -> 'O'
-let cpuSymbol = 'X';
+// DEFAULTS: usuario = ❌ -> 'X', NEXUS = ⭕ -> 'O'
+let playerSymbol = 'X';
+let cpuSymbol = 'O';
 let currentTurn = 'X';
 let running = false;
 let cpuThinking = false;
@@ -34,7 +36,7 @@ function symbolToEmoji(sym){
   return sym;
 }
 
-// Seguridad: ejecutamos solo cuando DOM esté listo
+// Ejecutar cuando DOM esté listo
 document.addEventListener('DOMContentLoaded', () => {
   // Referencias DOM
   boardEl = document.getElementById('board');
@@ -42,8 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
   messageEl = document.getElementById('message');
 
   opponentBanner = document.getElementById('opponentBanner');
-  pickX = document.getElementById('pickX');
-  pickO = document.getElementById('pickO');
+  pickX = document.getElementById('pickX'); // visual botón para ❌ (usuario)
+  pickO = document.getElementById('pickO'); // visual botón para ⭕
   startBtn = document.getElementById('startBtn');
   restartBtn = document.getElementById('restartBtn');
 
@@ -58,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
   modalMessage = document.getElementById('modalMessage');
   modalClose = document.getElementById('modalClose');
 
-  // Si algún elemento clave falta, abortamos con mensaje en consola (no rompe el resto)
+  // Seguridad: comprobar elementos mínimos
   if(!boardEl || !cells.length || !messageEl){
     console.error('Elementos del tablero faltantes. Revisá el HTML.');
     return;
@@ -70,9 +72,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if(txtEl) txtEl.textContent = `HOY JUGARÁS CONTRA ${cpuName}🤖`;
   }
 
-  // Listeners seguros (comprobando existencia)
-  if(pickX) pickX.addEventListener('click', onPickX);
-  if(pickO) pickO.addEventListener('click', onPickO);
+  // Listeners defensivos
+  if(pickX) pickX.addEventListener('click', () => onPick('X'));
+  if(pickO) pickO.addEventListener('click', () => onPick('O'));
   if(startBtn) startBtn.addEventListener('click', () => { hideBanner(); startGame(); });
   if(restartBtn) restartBtn.addEventListener('click', resetGame);
   if(modalClose) modalClose.addEventListener('click', hideModal);
@@ -88,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Inicialización
+  // Inicialización UI y estado
   setActiveChoice();
   loadState();
   resetBoardUI();
@@ -96,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
   message('Tocá "Comenzar" para iniciar la serie');
 });
 
-// ---------- UI / storage ----------
+// ---------- storage / UI ----------
 function loadState(){
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -108,24 +110,16 @@ function loadState(){
   updatePlaysUI();
   checkPlaysLimitUI();
 }
-function saveState(){
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
-}
+function saveState(){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){} }
 function updateScoreboardUI(){
   if(playerWinsEl) playerWinsEl.textContent = `${state.playerWins} / ${MAX_PLAYS}`;
   if(cpuWinsEl) cpuWinsEl.textContent = `${state.cpuWins} / ${MAX_PLAYS}`;
   if(playerBonusPercentEl) playerBonusPercentEl.textContent = `Bono: ${bonusPercent(state.playerWins)}%`;
   if(cpuBonusPercentEl) cpuBonusPercentEl.textContent = `Bono: ${bonusPercent(state.cpuWins)}%`;
 }
-function updatePlaysUI(){
-  if(playsLeftEl) playsLeftEl.textContent = Math.max(0, MAX_PLAYS - state.plays);
-}
-function bonusPercent(wins){
-  if(wins <= 0) return 0;
-  if(wins === 1) return 100;
-  if(wins === 2) return 150;
-  return 200;
-}
+function updatePlaysUI(){ if(playsLeftEl) playsLeftEl.textContent = Math.max(0, MAX_PLAYS - state.plays); }
+function bonusPercent(wins){ if(wins<=0) return 0; if(wins===1) return 100; if(wins===2) return 150; return 200; }
+
 function checkPlaysLimitUI(){
   if(!startBtn) return;
   if(state.plays >= MAX_PLAYS){
@@ -144,12 +138,14 @@ function checkPlaysLimitUI(){
     }
   }
 }
+
 function setActiveChoice(){
   if(!pickX || !pickO) return;
-  // pickX representa ⭕ (playerSymbol = 'O')
-  pickX.classList.toggle('active', playerSymbol === 'O');
-  pickO.classList.toggle('active', playerSymbol === 'X');
+  // pickX visual = ❌ -> corresponds to internal 'X'
+  pickX.classList.toggle('active', playerSymbol === 'X');
+  pickO.classList.toggle('active', playerSymbol === 'O');
 }
+
 function showBanner(){
   if(!opponentBanner) return;
   if(!sessionStarted && state.plays < MAX_PLAYS){
@@ -165,45 +161,30 @@ function hideBanner(){
   opponentBanner.classList.add('hidden');
   opponentBanner.setAttribute('aria-hidden', 'true');
 }
-function message(text){
-  if(messageEl) messageEl.textContent = text;
-}
+function message(text){ if(messageEl) messageEl.textContent = text; }
 
-// ---------- pick handlers ----------
-function onPickX(){
+// ---------- pick ----------
+function onPick(sym){
   if(sessionStarted) return;
-  playerSymbol = 'O'; // pickX shows ⭕
-  cpuSymbol = 'X';
-  setActiveChoice();
-}
-function onPickO(){
-  if(sessionStarted) return;
-  playerSymbol = 'X'; // pickO shows ❌
-  cpuSymbol = 'O';
+  if(sym === 'X'){ playerSymbol = 'X'; cpuSymbol = 'O'; }
+  else { playerSymbol = 'O'; cpuSymbol = 'X'; }
   setActiveChoice();
 }
 
 // ---------- tablero ----------
 function resetBoardUI(){
-  cells.forEach(c => {
-    c.innerHTML = '';
-    c.classList.remove('disabled','win');
-    c.disabled = false;
-  });
+  cells.forEach(c => { c.innerHTML = ''; c.classList.remove('disabled','win'); c.disabled = false; });
 }
 
 // ---------- juego ----------
 function startGame(){
-  if(state.plays >= MAX_PLAYS){
-    message('No puedes comenzar: alcanzaste el límite de 3 partidas por dispositivo.');
-    return;
-  }
+  if(state.plays >= MAX_PLAYS){ message('No puedes comenzar: alcanzaste el límite de 3 partidas por dispositivo.'); return; }
   sessionStarted = true;
   checkPlaysLimitUI();
 
   resetBoardUI();
   board = Array(9).fill(null);
-  currentTurn = playerSymbol; // el jugador siempre empieza
+  currentTurn = playerSymbol; // jugador empieza
   running = true;
   message(`Juego iniciado — Tú: ${symbolToEmoji(playerSymbol)}  |  ${cpuName}: ${symbolToEmoji(cpuSymbol)}`);
 }
@@ -246,14 +227,9 @@ function makeMove(index, symbol){
 
 function afterMove(){
   const winner = checkWinner(board);
-  if(winner){
-    handleEnd(winner);
-    return;
-  }
+  if(winner){ handleEnd(winner); return; }
   currentTurn = currentTurn === 'X' ? 'O' : 'X';
-  if(running && currentTurn === cpuSymbol){
-    doCpuTurn();
-  }
+  if(running && currentTurn === cpuSymbol) doCpuTurn();
 }
 
 // ---------- CPU (muy fácil) ----------
@@ -262,9 +238,7 @@ function doCpuTurn(){
   message(`${cpuName} está pensando...`);
   setTimeout(()=>{
     const move = cpuVeryEasyMove();
-    if(move !== undefined && move !== null){
-      makeMove(move, cpuSymbol);
-    }
+    if(move !== undefined && move !== null) makeMove(move, cpuSymbol);
     cpuThinking = false;
     afterMove();
   }, 420);
@@ -272,11 +246,8 @@ function doCpuTurn(){
 function cpuVeryEasyMove(){
   const blockProb = 0.30;
   const heurProb = 0.05;
-
   const block = findWinningMove(board, playerSymbol);
-  if(block !== null && Math.random() < blockProb){
-    return block;
-  }
+  if(block !== null && Math.random() < blockProb) return block;
   if(Math.random() < heurProb){
     if(board[4] === null) return 4;
     const corners = [0,2,6,8].filter(i => board[i] === null);
@@ -286,49 +257,22 @@ function cpuVeryEasyMove(){
   }
   return cpuRandomMove();
 }
-function cpuRandomMove(){
-  const avail = availableMoves(board);
-  if(avail.length === 0) return null;
-  return avail[Math.floor(Math.random()*avail.length)];
-}
-function availableMoves(b){
-  return b.map((v,i)=> v===null?i:null).filter(v=>v!==null);
-}
-function findWinningMove(b, symbol){
-  for(const i of availableMoves(b)){
-    b[i] = symbol;
-    const w = checkWinner(b);
-    b[i] = null;
-    if(w === symbol) return i;
-  }
-  return null;
-}
+function cpuRandomMove(){ const avail = availableMoves(board); if(avail.length === 0) return null; return avail[Math.floor(Math.random()*avail.length)]; }
+function availableMoves(b){ return b.map((v,i)=> v===null?i:null).filter(v=>v!==null); }
+function findWinningMove(b, symbol){ for(const i of availableMoves(b)){ b[i] = symbol; const w = checkWinner(b); b[i] = null; if(w === symbol) return i; } return null; }
 
 // ---------- ganador / fin de partida ----------
-function checkWinner(b){
-  for(const [a,b1,c] of WIN_COMBINATIONS){
-    if(b[a] && b[a] === b[b1] && b[a] === b[c]){
-      return b[a];
-    }
-  }
-  if(b.every(v=>v!==null)) return 'D';
-  return null;
-}
+function checkWinner(b){ for(const [a,b1,c] of WIN_COMBINATIONS){ if(b[a] && b[a] === b[b1] && b[a] === b[c]) return b[a]; } if(b.every(v=>v!==null)) return 'D'; return null; }
 
 function handleEnd(winner){
   running = false;
   if(state.plays < MAX_PLAYS) state.plays += 1;
 
-  if(winner === 'D'){
-    message('Empate 🙃 — no hay bono adicional');
-  } else {
-    if(winner === playerSymbol){
-      state.playerWins = Math.min(MAX_PLAYS, state.playerWins + 1);
-      message(`¡Ganaste esta partida! 🎉`);
-    } else {
-      state.cpuWins = Math.min(MAX_PLAYS, state.cpuWins + 1);
-      message(`${cpuName} gana esta partida 😢`);
-    }
+  if(winner === 'D') message('Empate 🙃 — no hay bono adicional');
+  else {
+    if(winner === playerSymbol){ state.playerWins = Math.min(MAX_PLAYS, state.playerWins + 1); message(`¡Ganaste esta partida! 🎉`); }
+    else { state.cpuWins = Math.min(MAX_PLAYS, state.cpuWins + 1); message(`${cpuName} gana esta partida 😢`); }
+
     for(const [a,b,c] of WIN_COMBINATIONS){
       if(board[a] && board[a] === board[b] && board[a] === board[c]){
         if(cells[a]) cells[a].classList.add('win');
@@ -358,20 +302,12 @@ function handleEnd(winner){
     setTimeout(()=>{
       const bp = bonusPercent(state.playerWins);
       if(modalPercent) modalPercent.textContent = `${bp}%`;
-      if(modalMessage){
-        modalMessage.textContent = (bp > 0)
-          ? `Has obtenido ${bp}% por ${state.playerWins} victoria(s).`
-          : `No obtuviste bono (0 victorias).`;
-      }
+      if(modalMessage) modalMessage.textContent = (bp>0) ? `Has obtenido ${bp}% por ${state.playerWins} victoria(s).` : `No obtuviste bono (0 victorias).`;
       showModal();
     }, 700);
   }
 }
 
 // Modal
-function showModal(){
-  if(resultModal) resultModal.classList.remove('hidden');
-}
-function hideModal(){
-  if(resultModal) resultModal.classList.add('hidden');
-}
+function showModal(){ if(resultModal) resultModal.classList.remove('hidden'); }
+function hideModal(){ if(resultModal) resultModal.classList.add('hidden'); }
