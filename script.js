@@ -1,5 +1,5 @@
 // Tatetí - Jugador vs NEXUS (CPU)
-// Ajustes visuales: emojis como marcas, emoji pick buttons, overlay central, muy fácil.
+// Versión corregida y más robusta: evita errores DOM y asegura que los botones funcionen.
 
 // Config
 const cpuName = 'NEXUS';
@@ -11,52 +11,92 @@ const WIN_COMBINATIONS = [
 const MAX_PLAYS = 3;
 const STORAGE_KEY = 'tatetiState_v2';
 
-// DOM
-const boardEl = document.getElementById('board');
-const cells = Array.from(document.querySelectorAll('.cell'));
-const messageEl = document.getElementById('message');
-
-const opponentBanner = document.getElementById('opponentBanner');
-const pickX = document.getElementById('pickX'); // here shows ⭕
-const pickO = document.getElementById('pickO'); // here shows ❌
-const startBtn = document.getElementById('startBtn');
-const restartBtn = document.getElementById('restartBtn');
-
-const playerWinsEl = document.getElementById('playerWins');
-const cpuWinsEl = document.getElementById('cpuWins');
-const playerBonusPercentEl = document.getElementById('playerBonusPercent');
-const cpuBonusPercentEl = document.getElementById('cpuBonusPercent');
-const playsLeftEl = document.getElementById('playsLeft');
-
-const resultModal = document.getElementById('resultModal');
-const modalPercent = document.getElementById('modalPercent');
-const modalMessage = document.getElementById('modalMessage');
-const modalClose = document.getElementById('modalClose');
-
-// Estado runtime
-let board = Array(9).fill(null); // stores 'X' or 'O'
-let playerSymbol = 'O'; // default emoji mapping: pickX shows ⭕ which we map to 'O' internally
+// Estado runtime y persistente
+let board = Array(9).fill(null);
+let playerSymbol = 'O'; // por defecto: ⭕ -> 'O'
 let cpuSymbol = 'X';
 let currentTurn = 'X';
 let running = false;
 let cpuThinking = false;
 let sessionStarted = false;
-
-// Estado persistente
 let state = { playerWins: 0, cpuWins: 0, plays: 0 };
 
-// inicializar UI: show banner text
-opponentBanner.querySelector('.opponent-text').textContent = `HOY JUGARÁS CONTRA ${cpuName}🤖`;
+// Elementos DOM (se asignan en DOMContentLoaded)
+let boardEl, cells, messageEl;
+let opponentBanner, pickX, pickO, startBtn, restartBtn;
+let playerWinsEl, cpuWinsEl, playerBonusPercentEl, cpuBonusPercentEl, playsLeftEl;
+let resultModal, modalPercent, modalMessage, modalClose;
 
-// --- helpers: map internal symbol to emoji for display ---
+// Map internal symbol to emoji
 function symbolToEmoji(sym){
-  // map internal 'X' -> ❌, 'O' -> ⭕
   if(sym === 'X') return '❌';
   if(sym === 'O') return '⭕';
   return sym;
 }
 
-// --- storage ---
+// Seguridad: ejecutamos solo cuando DOM esté listo
+document.addEventListener('DOMContentLoaded', () => {
+  // Referencias DOM
+  boardEl = document.getElementById('board');
+  cells = Array.from(document.querySelectorAll('.cell'));
+  messageEl = document.getElementById('message');
+
+  opponentBanner = document.getElementById('opponentBanner');
+  pickX = document.getElementById('pickX');
+  pickO = document.getElementById('pickO');
+  startBtn = document.getElementById('startBtn');
+  restartBtn = document.getElementById('restartBtn');
+
+  playerWinsEl = document.getElementById('playerWins');
+  cpuWinsEl = document.getElementById('cpuWins');
+  playerBonusPercentEl = document.getElementById('playerBonusPercent');
+  cpuBonusPercentEl = document.getElementById('cpuBonusPercent');
+  playsLeftEl = document.getElementById('playsLeft');
+
+  resultModal = document.getElementById('resultModal');
+  modalPercent = document.getElementById('modalPercent');
+  modalMessage = document.getElementById('modalMessage');
+  modalClose = document.getElementById('modalClose');
+
+  // Si algún elemento clave falta, abortamos con mensaje en consola (no rompe el resto)
+  if(!boardEl || !cells.length || !messageEl){
+    console.error('Elementos del tablero faltantes. Revisá el HTML.');
+    return;
+  }
+
+  // Inicializar banner text si existe
+  if(opponentBanner){
+    const txtEl = opponentBanner.querySelector('.opponent-text');
+    if(txtEl) txtEl.textContent = `HOY JUGARÁS CONTRA ${cpuName}🤖`;
+  }
+
+  // Listeners seguros (comprobando existencia)
+  if(pickX) pickX.addEventListener('click', onPickX);
+  if(pickO) pickO.addEventListener('click', onPickO);
+  if(startBtn) startBtn.addEventListener('click', () => { hideBanner(); startGame(); });
+  if(restartBtn) restartBtn.addEventListener('click', resetGame);
+  if(modalClose) modalClose.addEventListener('click', hideModal);
+
+  // Cells listeners
+  cells.forEach(c => c.addEventListener('click', onCellClick));
+
+  // keyboard: Enter para iniciar si la serie no se inició
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter' && !sessionStarted){
+      hideBanner();
+      startGame();
+    }
+  });
+
+  // Inicialización
+  setActiveChoice();
+  loadState();
+  resetBoardUI();
+  showBanner();
+  message('Tocá "Comenzar" para iniciar la serie');
+});
+
+// ---------- UI / storage ----------
 function loadState(){
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -68,37 +108,26 @@ function loadState(){
   updatePlaysUI();
   checkPlaysLimitUI();
 }
-
 function saveState(){
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){}
 }
-
-// --- UI helpers ---
-function setActiveChoice() {
-  // pickX shows emoji ⭕ but represents playerSymbol choice
-  pickX.classList.toggle('active', playerSymbol === 'O');
-  pickO.classList.toggle('active', playerSymbol === 'X');
-}
-
 function updateScoreboardUI(){
-  playerWinsEl.textContent = `${state.playerWins} / ${MAX_PLAYS}`;
-  cpuWinsEl.textContent = `${state.cpuWins} / ${MAX_PLAYS}`;
-  playerBonusPercentEl.textContent = `Bono: ${bonusPercent(state.playerWins)}%`;
-  cpuBonusPercentEl.textContent = `Bono: ${bonusPercent(state.cpuWins)}%`;
+  if(playerWinsEl) playerWinsEl.textContent = `${state.playerWins} / ${MAX_PLAYS}`;
+  if(cpuWinsEl) cpuWinsEl.textContent = `${state.cpuWins} / ${MAX_PLAYS}`;
+  if(playerBonusPercentEl) playerBonusPercentEl.textContent = `Bono: ${bonusPercent(state.playerWins)}%`;
+  if(cpuBonusPercentEl) cpuBonusPercentEl.textContent = `Bono: ${bonusPercent(state.cpuWins)}%`;
 }
-
 function updatePlaysUI(){
-  playsLeftEl.textContent = Math.max(0, MAX_PLAYS - state.plays);
+  if(playsLeftEl) playsLeftEl.textContent = Math.max(0, MAX_PLAYS - state.plays);
 }
-
 function bonusPercent(wins){
   if(wins <= 0) return 0;
   if(wins === 1) return 100;
   if(wins === 2) return 150;
   return 200;
 }
-
 function checkPlaysLimitUI(){
+  if(!startBtn) return;
   if(state.plays >= MAX_PLAYS){
     startBtn.disabled = true;
     startBtn.classList.add('disabled');
@@ -115,48 +144,55 @@ function checkPlaysLimitUI(){
     }
   }
 }
-
-// --- events ---
-pickX.addEventListener('click', ()=> {
-  if(sessionStarted) return;
-  // pickX shows ⭕, map it to 'O' internal
-  playerSymbol = 'O';
-  cpuSymbol = 'X';
-  setActiveChoice();
-});
-pickO.addEventListener('click', ()=> {
-  if(sessionStarted) return;
-  // pickO shows ❌, map it to 'X' internal
-  playerSymbol = 'X';
-  cpuSymbol = 'O';
-  setActiveChoice();
-});
-
-// Start from banner
-startBtn.addEventListener('click', () => {
-  hideBanner();
-  startGame();
-});
-restartBtn.addEventListener('click', resetGame);
-
-cells.forEach(c => c.addEventListener('click', onCellClick));
-if(modalClose) modalClose.addEventListener('click', hideModal);
-
-// banner functions
-function hideBanner(){
-  if(!opponentBanner) return;
-  opponentBanner.classList.add('hidden');
+function setActiveChoice(){
+  if(!pickX || !pickO) return;
+  // pickX representa ⭕ (playerSymbol = 'O')
+  pickX.classList.toggle('active', playerSymbol === 'O');
+  pickO.classList.toggle('active', playerSymbol === 'X');
 }
 function showBanner(){
   if(!opponentBanner) return;
   if(!sessionStarted && state.plays < MAX_PLAYS){
     opponentBanner.classList.remove('hidden');
+    opponentBanner.setAttribute('aria-hidden', 'false');
   } else {
     opponentBanner.classList.add('hidden');
+    opponentBanner.setAttribute('aria-hidden', 'true');
   }
 }
+function hideBanner(){
+  if(!opponentBanner) return;
+  opponentBanner.classList.add('hidden');
+  opponentBanner.setAttribute('aria-hidden', 'true');
+}
+function message(text){
+  if(messageEl) messageEl.textContent = text;
+}
 
-// --- game functions ---
+// ---------- pick handlers ----------
+function onPickX(){
+  if(sessionStarted) return;
+  playerSymbol = 'O'; // pickX shows ⭕
+  cpuSymbol = 'X';
+  setActiveChoice();
+}
+function onPickO(){
+  if(sessionStarted) return;
+  playerSymbol = 'X'; // pickO shows ❌
+  cpuSymbol = 'O';
+  setActiveChoice();
+}
+
+// ---------- tablero ----------
+function resetBoardUI(){
+  cells.forEach(c => {
+    c.innerHTML = '';
+    c.classList.remove('disabled','win');
+    c.disabled = false;
+  });
+}
+
+// ---------- juego ----------
 function startGame(){
   if(state.plays >= MAX_PLAYS){
     message('No puedes comenzar: alcanzaste el límite de 3 partidas por dispositivo.');
@@ -167,8 +203,7 @@ function startGame(){
 
   resetBoardUI();
   board = Array(9).fill(null);
-  // Always player starts
-  currentTurn = playerSymbol;
+  currentTurn = playerSymbol; // el jugador siempre empieza
   running = true;
   message(`Juego iniciado — Tú: ${symbolToEmoji(playerSymbol)}  |  ${cpuName}: ${symbolToEmoji(cpuSymbol)}`);
 }
@@ -189,17 +224,11 @@ function resetGame(){
   }
 }
 
-function resetBoardUI(){
-  cells.forEach(c => {
-    c.innerHTML = '';
-    c.classList.remove('disabled','win');
-    c.disabled = false;
-  });
-}
-
 function onCellClick(e){
   if(!running || cpuThinking) return;
-  const idx = Number(e.currentTarget.dataset.index);
+  const el = e.currentTarget;
+  const idx = Number(el.dataset.index);
+  if(Number.isNaN(idx)) return;
   if(board[idx]) return;
   if(currentTurn !== playerSymbol) return;
   makeMove(idx, playerSymbol);
@@ -209,9 +238,10 @@ function onCellClick(e){
 function makeMove(index, symbol){
   board[index] = symbol;
   const cell = cells[index];
-  // insert span with emoji for better sizing control
-  cell.innerHTML = `<span>${symbolToEmoji(symbol)}</span>`;
-  cell.classList.add('disabled');
+  if(cell){
+    cell.innerHTML = `<span>${symbolToEmoji(symbol)}</span>`;
+    cell.classList.add('disabled');
+  }
 }
 
 function afterMove(){
@@ -226,6 +256,7 @@ function afterMove(){
   }
 }
 
+// ---------- CPU (muy fácil) ----------
 function doCpuTurn(){
   cpuThinking = true;
   message(`${cpuName} está pensando...`);
@@ -238,17 +269,14 @@ function doCpuTurn(){
     afterMove();
   }, 420);
 }
-
-// CPU MUY FÁCIL
 function cpuVeryEasyMove(){
-  const blockProb = 0.30; // baja probabilidad de bloquear
+  const blockProb = 0.30;
   const heurProb = 0.05;
 
   const block = findWinningMove(board, playerSymbol);
   if(block !== null && Math.random() < blockProb){
     return block;
   }
-
   if(Math.random() < heurProb){
     if(board[4] === null) return 4;
     const corners = [0,2,6,8].filter(i => board[i] === null);
@@ -256,20 +284,16 @@ function cpuVeryEasyMove(){
     const sides = [1,3,5,7].filter(i => board[i] === null);
     if(sides.length) return sides[Math.floor(Math.random()*sides.length)];
   }
-
   return cpuRandomMove();
 }
-
 function cpuRandomMove(){
   const avail = availableMoves(board);
   if(avail.length === 0) return null;
   return avail[Math.floor(Math.random()*avail.length)];
 }
-
 function availableMoves(b){
   return b.map((v,i)=> v===null?i:null).filter(v=>v!==null);
 }
-
 function findWinningMove(b, symbol){
   for(const i of availableMoves(b)){
     b[i] = symbol;
@@ -280,6 +304,7 @@ function findWinningMove(b, symbol){
   return null;
 }
 
+// ---------- ganador / fin de partida ----------
 function checkWinner(b){
   for(const [a,b1,c] of WIN_COMBINATIONS){
     if(b[a] && b[a] === b[b1] && b[a] === b[c]){
@@ -292,10 +317,7 @@ function checkWinner(b){
 
 function handleEnd(winner){
   running = false;
-
-  if(state.plays < MAX_PLAYS){
-    state.plays += 1;
-  }
+  if(state.plays < MAX_PLAYS) state.plays += 1;
 
   if(winner === 'D'){
     message('Empate 🙃 — no hay bono adicional');
@@ -307,12 +329,11 @@ function handleEnd(winner){
       state.cpuWins = Math.min(MAX_PLAYS, state.cpuWins + 1);
       message(`${cpuName} gana esta partida 😢`);
     }
-
     for(const [a,b,c] of WIN_COMBINATIONS){
       if(board[a] && board[a] === board[b] && board[a] === board[c]){
-        cells[a].classList.add('win');
-        cells[b].classList.add('win');
-        cells[c].classList.add('win');
+        if(cells[a]) cells[a].classList.add('win');
+        if(cells[b]) cells[b].classList.add('win');
+        if(cells[c]) cells[c].classList.add('win');
         break;
       }
     }
@@ -336,42 +357,21 @@ function handleEnd(winner){
   } else {
     setTimeout(()=>{
       const bp = bonusPercent(state.playerWins);
-      modalPercent.textContent = `${bp}%`;
-      if(bp > 0){
-        modalMessage.textContent = `Has obtenido ${bp}% por ${state.playerWins} victoria(s).`;
-      } else {
-        modalMessage.textContent = `No obtuviste bono (0 victorias).`;
+      if(modalPercent) modalPercent.textContent = `${bp}%`;
+      if(modalMessage){
+        modalMessage.textContent = (bp > 0)
+          ? `Has obtenido ${bp}% por ${state.playerWins} victoria(s).`
+          : `No obtuviste bono (0 victorias).`;
       }
       showModal();
     }, 700);
   }
 }
 
-// Modal helpers
+// Modal
 function showModal(){
-  resultModal.classList.remove('hidden');
+  if(resultModal) resultModal.classList.remove('hidden');
 }
 function hideModal(){
-  resultModal.classList.add('hidden');
+  if(resultModal) resultModal.classList.add('hidden');
 }
-
-// keyboard: Enter starts if banner visible
-document.addEventListener('keydown', (e)=>{
-  if(e.key === 'Enter' && !sessionStarted){
-    hideBanner();
-    startGame();
-  }
-});
-
-// Utility
-function message(text){
-  messageEl.textContent = text;
-}
-
-// Init
-setActiveChoice();
-loadState();
-resetBoardUI();
-showBanner();
-message('Tocá "Comenzar" para iniciar la serie');
-```
