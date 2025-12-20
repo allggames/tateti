@@ -1,7 +1,6 @@
 // Tatetí - Jugador vs NEXUS (CPU)
-// Intro actualizado: pantalla de presentación con fondo naranja + many 🔱,
-// barra de carga visual que avanza automáticamente. Al terminar, ocultar intro
-// y mostrar el cartel "HOY JUGARÁS CONTRA NEXUS" (banner). El resto de la lógica se mantiene.
+// Versión robusta: corrige problemas con el botón "Comenzar" asegurando
+// que el listener siempre esté enganchado cuando se muestra el banner.
 
 // Config
 const cpuName = 'NEXUS';
@@ -13,7 +12,7 @@ const WIN_COMBINATIONS = [
 const MAX_PLAYS = 3;
 const STORAGE_KEY = 'tatetiState_v2';
 
-// Duración total de "carga" en ms
+// Duración total de "carga" en ms (intro)
 const INTRO_DURATION = 2400;
 
 // Estado runtime y persistente
@@ -26,7 +25,7 @@ let cpuThinking = false;
 let sessionStarted = false;
 let state = { playerWins: 0, cpuWins: 0, plays: 0 };
 
-// Elementos DOM
+// Elementos DOM (declarados a nivel superior)
 let boardEl, cells, messageEl;
 let introOverlay, loadingBar, loadingText, opponentBanner, pickX, pickO, startBtn, restartBtn;
 let playerWinsEl, cpuWinsEl, playerBonusPercentEl, cpuBonusPercentEl, playsLeftEl;
@@ -40,7 +39,7 @@ function symbolToEmoji(sym){
   return sym;
 }
 
-// DOMContentLoaded init
+// ---------- Inicia cuando DOM está listo ----------
 document.addEventListener('DOMContentLoaded', () => {
   boardEl = document.getElementById('board');
   cells = Array.from(document.querySelectorAll('.cell'));
@@ -69,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   footerLogo = document.getElementById('footerLogo');
 
-  // Safety
+  // Seguridad mínima
   if(!boardEl || !cells.length || !messageEl){
     console.error('Elementos del tablero faltantes. Revisá el HTML.');
     return;
@@ -79,24 +78,20 @@ document.addEventListener('DOMContentLoaded', () => {
   if(pickX) pickX.addEventListener('click', () => onPick('X'));
   if(pickO) pickO.addEventListener('click', () => onPick('O'));
 
-  // Banner / start
-  if(startBtn) startBtn.addEventListener('click', () => {
-    hideBanner();
-    startGame();
-  });
-
+  // restart
   if(restartBtn) restartBtn.addEventListener('click', resetGame);
 
-  // Modal close
+  // modal close
   if(modalClose) modalClose.addEventListener('click', hideModal);
 
-  // Cells
+  // cells
   cells.forEach(c => c.addEventListener('click', onCellClick));
 
-  // keyboard: allow Enter to start after banner visible
+  // keyboard: permitir Enter para iniciar cuando corresponda
   document.addEventListener('keydown', (e)=>{
     if(e.key === 'Enter'){
       if(!sessionStarted && opponentBanner && !opponentBanner.classList.contains('hidden')){
+        // si el banner está visible, iniciar (comportamiento existente)
         hideBanner();
         startGame();
       }
@@ -108,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadState();
   resetBoardUI();
 
-  // Show intro first (unless series completed)
+  // Intro -> banner flow
   if(state.plays >= MAX_PLAYS){
     hideIntro();
     hideBanner();
@@ -118,22 +113,45 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   message('Tocá "Comenzar" para iniciar la serie');
+
+  // DEBUG: reportamos si el botón existe
+  console.debug('startBtn element at init:', !!startBtn);
 });
+
+// ---------- Manejo robusto del listener de Start ----------
+let _startHandler = null;
+function attachStartListener(){
+  if(!startBtn) return;
+  // asegurarse de que el botón sea tipo button (evita comportamiento submit)
+  startBtn.type = 'button';
+  // quitar handler previo
+  if(_startHandler) startBtn.removeEventListener('click', _startHandler);
+  // nuevo handler
+  _startHandler = () => {
+    console.debug('startBtn clicked -> handler running');
+    hideBanner();
+    startGame();
+  };
+  startBtn.addEventListener('click', _startHandler);
+  // asegurar que esté habilitado visualmente
+  startBtn.disabled = false;
+  startBtn.classList.remove('disabled');
+  console.debug('attachStartListener: attached and enabled');
+}
 
 // ---------- intro -> banner flow ----------
 function showIntroThenBanner(){
   showIntro();
   startLoadingBar(INTRO_DURATION).then(()=> {
-    // after loading completed
-    // if limit reached while loading, skip banner
     if(state.plays >= MAX_PLAYS){
       hideIntro();
       hideBanner();
       return;
     }
-    // fade out intro then show banner
     hideIntro();
-    setTimeout(()=> showBanner(), 160);
+    setTimeout(()=> {
+      showBanner();
+    }, 150);
   });
 }
 function showIntro(){
@@ -143,7 +161,6 @@ function showIntro(){
   introOverlay.setAttribute('aria-hidden', 'false');
   if(opponentBanner) opponentBanner.classList.add('hidden');
   hideFooterLogo();
-  // reset loading visuals
   if(loadingBar) loadingBar.style.width = '0%';
   if(loadingText) loadingText.textContent = 'Cargando el juego...';
 }
@@ -154,7 +171,7 @@ function hideIntro(){
   introOverlay.setAttribute('aria-hidden', 'true');
 }
 
-// animate loading bar over `duration` ms, returns Promise
+// animación de barra (Promise)
 function startLoadingBar(duration){
   return new Promise(resolve=>{
     if(!loadingBar){ setTimeout(resolve, duration); return; }
@@ -167,7 +184,6 @@ function startLoadingBar(duration){
       if(pct < 1){
         requestAnimationFrame(tick);
       } else {
-        // small delay for UX
         setTimeout(()=> {
           if(loadingText) loadingText.textContent = 'Listo';
           resolve();
@@ -178,9 +194,20 @@ function startLoadingBar(duration){
   });
 }
 
-// banner / footer
-function showBanner(){ if(!opponentBanner) return; opponentBanner.classList.remove('hidden'); opponentBanner.setAttribute('aria-hidden','false'); }
-function hideBanner(){ if(!opponentBanner) return; opponentBanner.classList.add('hidden'); opponentBanner.setAttribute('aria-hidden','true'); }
+// ---------- Banner / Footer control (aquí adjuntamos listener) ----------
+function showBanner(){
+  if(!opponentBanner) return;
+  opponentBanner.classList.remove('hidden');
+  opponentBanner.setAttribute('aria-hidden','false');
+  // REFRESH: aseguramos listener activo y botón habilitado
+  // (esto soluciona casos donde el listener no fue enganchado originalmente)
+  attachStartListener();
+}
+function hideBanner(){
+  if(!opponentBanner) return;
+  opponentBanner.classList.add('hidden');
+  opponentBanner.setAttribute('aria-hidden','true');
+}
 function showFooterLogo(){ if(!footerLogo) return; footerLogo.classList.remove('hidden'); footerLogo.style.display = ''; }
 function hideFooterLogo(){ if(!footerLogo) return; footerLogo.classList.add('hidden'); footerLogo.style.display = 'none'; }
 
@@ -205,6 +232,7 @@ function updateScoreboardUI(){
 }
 function updatePlaysUI(){ if(playsLeftEl) playsLeftEl.textContent = Math.max(0, MAX_PLAYS - state.plays); }
 function bonusPercent(wins){ if(wins<=0) return 0; if(wins===1) return 100; if(wins===2) return 150; return 200; }
+
 function checkPlaysLimitUI(){
   if(!startBtn) return;
   if(state.plays >= MAX_PLAYS){
@@ -288,7 +316,7 @@ function afterMove(){
   if(running && currentTurn === cpuSymbol) doCpuTurn();
 }
 
-// ---------- CPU (muy fácil) ----------
+// ---------- CPU ----------
 function doCpuTurn(){
   cpuThinking = true;
   message(`${cpuName} está pensando...`);
