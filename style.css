@@ -190,14 +190,16 @@ body{
 }
 .overlay.hidden{display:none; opacity:0; pointer-events:none;}
 
+/* overlay-card: ahora con tono naranja sólido y buen contraste */
 .overlay-card{
-  background: var(--overlay-solid); /* ahora más opaco */
+  background: linear-gradient(180deg, rgba(210,95,18,0.98), rgba(180,70,18,0.98));
   color: var(--panel-text);
   border-radius:12px;
   padding:26px;
   width:min(420px, 92%);
   text-align:center;
-  box-shadow:0 16px 44px rgba(0,0,0,0.28);
+  box-shadow:0 18px 48px rgba(150,45,0,0.35);
+  border: 1px solid rgba(255,255,255,0.06);
 }
 .opponent-text{
   color:#fff;
@@ -209,15 +211,15 @@ body{
   min-width:160px;
   padding:12px 18px;
   font-weight:800;
-  background: var(--orange-bright);
-  color: #fff;
+  background: #fff;
+  color: var(--bg-end);
   border-radius:10px;
   border:none;
   cursor:pointer;
   box-shadow: 0 8px 20px rgba(0,0,0,0.12);
 }
 
-/* Modal styles */
+/* Modal styles: caja ahora naranja en lugar de negra */
 .modal.hidden{display:none;}
 .modal{
   position:fixed;
@@ -225,17 +227,19 @@ body{
   display:flex;
   align-items:center;
   justify-content:center;
-  background:rgba(2,6,23,0.6);
+  background:rgba(2,6,23,0.45);
   z-index:3000;
 }
 .modal-content{
-  background: rgba(2,6,12,0.9);
-  color:inherit;
+  /* nuevo fondo naranja (más oscuro para contraste con texto blanco) */
+  background: linear-gradient(180deg, rgba(140,50,10,0.98), rgba(110,40,8,0.98));
+  color: #fff;
   padding:22px;
   border-radius:12px;
   width:min(480px, 92%);
   text-align:center;
-  box-shadow:0 12px 36px rgba(0,0,0,0.6);
+  box-shadow:0 18px 44px rgba(120,40,10,0.45);
+  border: 1px solid rgba(0,0,0,0.12);
 }
 .modal-content h2{margin:0 0 10px;color:#fff}
 .modal-label{font-weight:800;margin:8px 0;color:rgba(255,255,255,0.95)}
@@ -243,12 +247,24 @@ body{
   margin:6px auto 8px auto;
   font-size:64px;
   font-weight:900;
-  color: var(--orange-bright);
-  text-shadow: 0 6px 18px rgba(255,122,0,0.14);
+  color: #fff5e6; /* ligeramente claro para destacar sobre naranja */
+  text-shadow: 0 6px 14px rgba(0,0,0,0.2);
 }
-.modal-subtext{color:rgba(255,255,255,0.85);margin-bottom:6px}
-.modal-instruction{margin-top:8px;color:rgba(255,255,255,0.85);font-weight:700}
+/* aclaración: el % ya era naranja; si preferís que permanezca naranja brillante:
+   cambia .modal-percent color a var(--orange-bright) */
+.modal-subtext{color:rgba(255,255,255,0.92);margin-bottom:6px}
+.modal-instruction{margin-top:8px;color:rgba(255,255,255,0.92);font-weight:700}
 .modal-actions{margin-top:12px;display:flex;justify-content:center;gap:8px}
+
+/* botón dentro del modal: blanco con texto naranja para buen contraste */
+.modal-content .primary{
+  background:#ffffff;
+  color: var(--bg-end);
+  padding:8px 14px;
+  border-radius:8px;
+  font-weight:700;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
 
 /* responsive */
 @media (max-width:480px){
