@@ -60,8 +60,6 @@ h1{margin:0 0 14px 0;font-size:1.6rem;text-align:center;color:var(--accent);}
 .primary{background:var(--accent);color:#022;padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:600;}
 #restartBtn{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.03);padding:6px 10px;border-radius:8px;cursor:pointer;}
 
-.difficulty-note{padding:6px 10px;color:var(--muted);border-radius:6px;background:transparent;font-size:0.95rem;}
-
 .scoreboard{
   display:flex;
   gap:18px;
@@ -112,6 +110,32 @@ h1{margin:0 0 14px 0;font-size:1.6rem;text-align:center;color:var(--accent);}
 .cell.win{background:linear-gradient(90deg, rgba(22,163,74,0.12), rgba(22,163,74,0.06));outline:3px solid rgba(22,163,74,0.12);}
 
 .legend{margin-top:16px;text-align:center;color:var(--muted);font-size:.9rem;}
+
+/* Modal styles */
+.modal.hidden{display:none;}
+.modal{
+  position:fixed;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(2,6,23,0.6);
+  z-index:2000;
+}
+.modal-content{
+  background:var(--panel);
+  color:inherit;
+  padding:20px;
+  border-radius:10px;
+  width:min(420px, 90%);
+  text-align:center;
+  box-shadow:0 12px 36px rgba(2,6,23,0.8);
+}
+.modal-content h2{margin:0 0 10px;color:var(--accent)}
+.modal-actions{margin-top:12px;display:flex;justify-content:center;gap:8px}
+
+/* Botón disabled look */
+button.disabled{opacity:0.6;cursor:not-allowed;}
 
 /* Ajustes para pantallas pequeñas: reducir --cell-size */
 @media (max-width:480px){
