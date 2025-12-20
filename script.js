@@ -1,6 +1,5 @@
 // Tatetí - Jugador vs NEXUS (CPU)
-// Overlay cartel en el centro con "HOY JUGARÁS CONTRA NEXUS🤖" + botón Comenzar.
-// Al tocar Comenzar, el cartel desaparece y comienza la serie (auto-inicio de partidas).
+// Ajustes visuales: emojis como marcas, emoji pick buttons, overlay central, muy fácil.
 
 // Config
 const cpuName = 'NEXUS';
@@ -18,8 +17,8 @@ const cells = Array.from(document.querySelectorAll('.cell'));
 const messageEl = document.getElementById('message');
 
 const opponentBanner = document.getElementById('opponentBanner');
-const pickX = document.getElementById('pickX');
-const pickO = document.getElementById('pickO');
+const pickX = document.getElementById('pickX'); // here shows ⭕
+const pickO = document.getElementById('pickO'); // here shows ❌
 const startBtn = document.getElementById('startBtn');
 const restartBtn = document.getElementById('restartBtn');
 
@@ -35,9 +34,9 @@ const modalMessage = document.getElementById('modalMessage');
 const modalClose = document.getElementById('modalClose');
 
 // Estado runtime
-let board = Array(9).fill(null);
-let playerSymbol = 'X';
-let cpuSymbol = 'O';
+let board = Array(9).fill(null); // stores 'X' or 'O'
+let playerSymbol = 'O'; // default emoji mapping: pickX shows ⭕ which we map to 'O' internally
+let cpuSymbol = 'X';
 let currentTurn = 'X';
 let running = false;
 let cpuThinking = false;
@@ -46,8 +45,16 @@ let sessionStarted = false;
 // Estado persistente
 let state = { playerWins: 0, cpuWins: 0, plays: 0 };
 
-// inicializar texto del banner
+// inicializar UI: show banner text
 opponentBanner.querySelector('.opponent-text').textContent = `HOY JUGARÁS CONTRA ${cpuName}🤖`;
+
+// --- helpers: map internal symbol to emoji for display ---
+function symbolToEmoji(sym){
+  // map internal 'X' -> ❌, 'O' -> ⭕
+  if(sym === 'X') return '❌';
+  if(sym === 'O') return '⭕';
+  return sym;
+}
 
 // --- storage ---
 function loadState(){
@@ -68,8 +75,9 @@ function saveState(){
 
 // --- UI helpers ---
 function setActiveChoice() {
-  pickX.classList.toggle('active', playerSymbol === 'X');
-  pickO.classList.toggle('active', playerSymbol === 'O');
+  // pickX shows emoji ⭕ but represents playerSymbol choice
+  pickX.classList.toggle('active', playerSymbol === 'O');
+  pickO.classList.toggle('active', playerSymbol === 'X');
 }
 
 function updateScoreboardUI(){
@@ -92,11 +100,9 @@ function bonusPercent(wins){
 
 function checkPlaysLimitUI(){
   if(state.plays >= MAX_PLAYS){
-    // Si ya jugaste las 3 partidas no permitimos volver a iniciar
     startBtn.disabled = true;
     startBtn.classList.add('disabled');
     message('Has alcanzado el máximo de 3 partidas por dispositivo.');
-    // ocultar el banner si queda visible
     hideBanner();
   } else {
     if(sessionStarted){
@@ -105,43 +111,44 @@ function checkPlaysLimitUI(){
     } else {
       startBtn.disabled = false;
       startBtn.classList.remove('disabled');
-      showBanner(); // mostrar banner si aún no se inició la serie
+      showBanner();
     }
   }
 }
 
-// --- eventos UI ---
+// --- events ---
 pickX.addEventListener('click', ()=> {
   if(sessionStarted) return;
-  playerSymbol = 'X';
-  cpuSymbol = 'O';
-  setActiveChoice();
-});
-pickO.addEventListener('click', ()=> {
-  if(sessionStarted) return;
+  // pickX shows ⭕, map it to 'O' internal
   playerSymbol = 'O';
   cpuSymbol = 'X';
   setActiveChoice();
 });
+pickO.addEventListener('click', ()=> {
+  if(sessionStarted) return;
+  // pickO shows ❌, map it to 'X' internal
+  playerSymbol = 'X';
+  cpuSymbol = 'O';
+  setActiveChoice();
+});
 
+// Start from banner
 startBtn.addEventListener('click', () => {
-  // Al presionar, ocultar el cartel y comenzar la serie
   hideBanner();
   startGame();
 });
 restartBtn.addEventListener('click', resetGame);
 
 cells.forEach(c => c.addEventListener('click', onCellClick));
-modalClose.addEventListener('click', hideModal);
+if(modalClose) modalClose.addEventListener('click', hideModal);
 
-// --- banner show/hide ---
+// banner functions
 function hideBanner(){
   if(!opponentBanner) return;
   opponentBanner.classList.add('hidden');
 }
 function showBanner(){
   if(!opponentBanner) return;
-  // solo mostrar si no se inició la sesión y no se superó el limite
   if(!sessionStarted && state.plays < MAX_PLAYS){
     opponentBanner.classList.remove('hidden');
   } else {
@@ -149,7 +156,7 @@ function showBanner(){
   }
 }
 
-// --- juego ---
+// --- game functions ---
 function startGame(){
   if(state.plays >= MAX_PLAYS){
     message('No puedes comenzar: alcanzaste el límite de 3 partidas por dispositivo.');
@@ -160,9 +167,10 @@ function startGame(){
 
   resetBoardUI();
   board = Array(9).fill(null);
+  // Always player starts
   currentTurn = playerSymbol;
   running = true;
-  message(`Juego iniciado — Tú: ${playerSymbol}  |  ${cpuName}: ${cpuSymbol}`);
+  message(`Juego iniciado — Tú: ${symbolToEmoji(playerSymbol)}  |  ${cpuName}: ${symbolToEmoji(cpuSymbol)}`);
 }
 
 function resetGame(){
@@ -183,7 +191,7 @@ function resetGame(){
 
 function resetBoardUI(){
   cells.forEach(c => {
-    c.textContent = '';
+    c.innerHTML = '';
     c.classList.remove('disabled','win');
     c.disabled = false;
   });
@@ -201,7 +209,8 @@ function onCellClick(e){
 function makeMove(index, symbol){
   board[index] = symbol;
   const cell = cells[index];
-  cell.textContent = symbol;
+  // insert span with emoji for better sizing control
+  cell.innerHTML = `<span>${symbolToEmoji(symbol)}</span>`;
   cell.classList.add('disabled');
 }
 
@@ -221,7 +230,7 @@ function doCpuTurn(){
   cpuThinking = true;
   message(`${cpuName} está pensando...`);
   setTimeout(()=>{
-    const move = cpuVeryEasyMove(); // modo MUY FÁCIL oculto
+    const move = cpuVeryEasyMove();
     if(move !== undefined && move !== null){
       makeMove(move, cpuSymbol);
     }
@@ -230,10 +239,9 @@ function doCpuTurn(){
   }, 420);
 }
 
-// CPU MUY FÁCIL (oculto)
-// blockProb reducido para facilitar ganar a NEXUS
+// CPU MUY FÁCIL
 function cpuVeryEasyMove(){
-  const blockProb = 0.30; // puede ajustarse aún más abajo si querés
+  const blockProb = 0.30; // baja probabilidad de bloquear
   const heurProb = 0.05;
 
   const block = findWinningMove(board, playerSymbol);
@@ -347,7 +355,7 @@ function hideModal(){
   resultModal.classList.add('hidden');
 }
 
-// Teclas
+// keyboard: Enter starts if banner visible
 document.addEventListener('keydown', (e)=>{
   if(e.key === 'Enter' && !sessionStarted){
     hideBanner();
@@ -355,14 +363,15 @@ document.addEventListener('keydown', (e)=>{
   }
 });
 
-// Utilidad
+// Utility
 function message(text){
   messageEl.textContent = text;
 }
 
-// Inicialización
+// Init
 setActiveChoice();
 loadState();
 resetBoardUI();
 showBanner();
 message('Tocá "Comenzar" para iniciar la serie');
+```
