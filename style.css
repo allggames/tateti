@@ -220,7 +220,26 @@ body{
   transition: opacity .22s ease, visibility .22s ease;
 }
 
-/* Modal (resultado) — card con sombra y padding */
+/* Modal (resultado) — card with side placement (hidden by default) */
+.modal{
+  position: fixed;
+  right: 36px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2215;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+.modal.hidden{
+  display: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Modal content style */
 .modal-content{
   border-radius:12px;
   box-shadow: 0 22px 52px rgba(0,0,0,0.36);
@@ -228,6 +247,8 @@ body{
   padding:22px;
   background: linear-gradient(180deg, rgba(140,50,10,0.98), rgba(110,40,8,0.98));
   color: #fff;
+  min-width: 260px;
+  max-width: 360px;
 }
 
 /* Result box (side) style fallback */
@@ -250,6 +271,8 @@ body{
   .title{ font-size:1.05rem; }
   .board-logo{ max-width:120px; }
   .loading-bar-outer{ width:86%; }
+  .modal{ right: 12px; left: 12px; top: auto; bottom: 14px; transform: none; justify-content:center; }
+  .modal-content{ max-width: calc(100% - 48px); }
 }
 
 @media (max-width:480px){
