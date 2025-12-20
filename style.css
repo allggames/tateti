@@ -150,19 +150,21 @@ body{
 .banner-start{ min-width:160px; padding:10px 18px; font-weight:800; background:#fff; color: var(--bg-end); border-radius:10px; border:none; cursor:pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
 
 /* Result modal (right side) */
-/* modal wrapper: ocupa toda la pantalla y centra el contenido */
+/* Patch: modal centrado, texto centrado y fondo menos opaco (detalles del fondo visibles) */
+
 .modal{
   position: fixed;
-  inset: 0; /* top:0; right:0; bottom:0; left:0; */
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2400; /* por encima de otros overlays */
-  background: rgba(2,6,23,0.45); /* ligero fondo oscuro al aparecer */
+  z-index: 2400;
+  /* fondo semi-transparente más claro para que no "mate" los detalles del fondo */
+  background: rgba(2, 6, 23, 0.14);
   transition: opacity .18s ease, visibility .18s ease;
 }
 
-/* estado oculto */
+/* oculto */
 .modal.hidden{
   display: none;
   opacity: 0;
@@ -170,7 +172,13 @@ body{
   pointer-events: none;
 }
 
-/* contenido del modal: mantiene el estilo anterior pero centrado */
+/* animación de entrada suave */
+@keyframes modalEnter {
+  from { opacity: 0; transform: translateY(-6px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* contenido: centrado y con ancho cómodo */
 .modal-content{
   border-radius:12px;
   box-shadow: 0 22px 52px rgba(0,0,0,0.36);
@@ -181,7 +189,26 @@ body{
   min-width: 320px;
   max-width: 92%;
   width: min(420px, 88%);
-  transform: translateY(0);
+  text-align: center; /* <- centra todo el texto */
+  animation: modalEnter .22s ease both;
+}
+
+/* Ajustes tipográficos para enfatizar el porcentaje */
+.modal-percent{
+  margin: 10px 0 14px;
+  font-weight:900;
+  font-size:1.6rem;
+  line-height:1;
+}
+
+/* Botón centrado y con margen */
+.modal-actions{ display:flex; justify-content:center; margin-top:8px; }
+.modal-actions .primary{ padding:8px 14px; }
+
+/* Mantener los detalles del fondo visibles incluso en pantallas pequeñas */
+@media (max-width:900px){
+  .modal{ background: rgba(2,6,23,0.12); }
+  .modal-content{ width: min(560px, 92%); }
 }
 
 /* Buttons */
