@@ -1,12 +1,13 @@
-// script.js (reemplaza tu archivo actual)
-// Objetivo:
-// - Mostrar intro exactamente como en tu segunda imagen: logo centrado + barras de carga debajo + tridentes atenuados en el fondo del intro.
-// - Animar la barra de carga con porcentaje visible.
-// - Cuando termine la carga: ocultar el intro, mostrar brevemente el cartel "HOY JUGARÁS CONTRA NEXUS" y automáticamente comenzar la serie (startGame).
-// - Mantener la lógica del juego (celdas, CPU, marcador).
-//
-// Pega este archivo reemplazando tu script.js actual y recargá (Ctrl+F5). Si algo sigue fallando, pega el contenido de la consola (Ctrl+Shift+I → Console).
+// script.js (editado y estable)
+// Objetivos cumplidos:
+// - Intro con logo + tridentes/emoji atenuados en el fondo.
+// - Barra de carga animada con porcentaje debajo del logo (usa los elementos del HTML si existen).
+// - Cuando termina la carga: oculta intro y MUESTRA el cartel "HOY JUGARÁS CONTRA NEXUS" con botón "Comenzar" (NO hay auto-start).
+// - El juego comienza cuando el usuario hace click en "Comenzar".
+// - Mantiene la lógica del juego (partidas, CPU, marcador, bono mostrado sólo al final).
+// - Más defensas para evitar que errores rompan el flujo (logs en consola).
 
+/* ---------- Config / Estado ---------- */
 const cpuName = 'NEXUS';
 const WIN_COMBINATIONS = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -15,9 +16,7 @@ const WIN_COMBINATIONS = [
 ];
 const MAX_PLAYS = 3;
 const STORAGE_KEY = 'tatetiState_v2';
-
-// Tiempo total de "carga" en ms (ajusta si querés)
-const INTRO_DURATION = 1800;
+const INTRO_DURATION = 1600; // ms
 
 let board = Array(9).fill(null);
 let playerSymbol = 'X';
@@ -28,7 +27,7 @@ let cpuThinking = false;
 let sessionStarted = false;
 let state = { playerWins:0, cpuWins:0, plays:0 };
 
-// DOM refs
+/* ---------- DOM refs (se llenan en init) ---------- */
 let boardEl, cells, messageEl;
 let introOverlay, introCard, introParticles;
 let loadingBar, loadingText;
@@ -37,12 +36,13 @@ let playerWinsEl, cpuWinsEl, playerBonusPercentEl, cpuBonusPercentEl, playsLeftE
 let resultModal, modalPercent, modalMessage, modalClose;
 let boardLogo, bgTridents, bgEmojis;
 
-function dbg(...args){ console.debug('[tateti]', ...args); }
+/* ---------- Helpers ---------- */
 function by(id){ return document.getElementById(id); }
+function dbg(...args){ console.debug('[tateti]', ...args); }
 function symbolToEmoji(s){ return s === 'X' ? '❌' : (s === 'O' ? '⭕' : s); }
-function message(text){ if(messageEl) messageEl.textContent = text; }
+function message(txt){ if(messageEl) messageEl.textContent = txt; }
 
-// ------------------- Background & intro particles -------------------
+/* ---------- Background (global) ---------- */
 function createBgLayer(id){
   let el = by(id);
   if(!el){
@@ -56,7 +56,9 @@ function createBgLayer(id){
   }
   return el;
 }
+
 function populateBackground(){
+  // utiliza los contenedores presentes en HTML (los creamos si faltan)
   bgTridents = createBgLayer('bgTridents');
   bgEmojis = createBgLayer('bgEmojis');
   bgTridents.innerHTML = '';
@@ -65,17 +67,19 @@ function populateBackground(){
   const W = Math.max(window.innerWidth, 800);
   const H = Math.max(window.innerHeight, 600);
 
-  const place = (container, count, factory) => {
+  // colocador con separación básica
+  function place(container, count, factory, minDist = 60){
     const placed = [];
     const padding = 24;
     for(let i=0;i<count;i++){
-      let attempts = 0, x, y, ok;
+      let attempts = 0;
+      let x,y,ok;
       do {
         x = Math.random() * (W - padding*2) + padding;
         y = Math.random() * (H - padding*2) + padding;
         ok = true;
         for(const p of placed){
-          if(Math.hypot(p.x - x, p.y - y) < 60) { ok = false; break; }
+          if(Math.hypot(p.x-x, p.y-y) < minDist){ ok = false; break; }
         }
         attempts++;
       } while(!ok && attempts < 40);
@@ -87,47 +91,45 @@ function populateBackground(){
       node.style.pointerEvents = 'none';
       container.appendChild(node);
     }
-  };
+  }
 
-  // Tridents atenuados
-  const trCount = Math.round(Math.max(8, Math.min(22, (W*H)/200000)));
+  // tridentes atenuados
+  const trCount = Math.round(Math.max(8, Math.min(24, (W*H)/180000)));
   place(bgTridents, trCount, () => {
     const n = document.createElement('div');
     n.className = 'bg-item trident';
     n.textContent = '🔱';
-    n.style.fontSize = `${10 + Math.floor(Math.random()*18)}px`;
-    // color/opacity attenuated
-    n.style.opacity = (0.04 + Math.random()*0.06).toString();
+    n.style.fontSize = `${10 + Math.floor(Math.random()*20)}px`;
+    n.style.opacity = `${0.04 + Math.random()*0.06}`;
     n.style.transform = `rotate(${(-12 + Math.random()*24).toFixed(1)}deg)`;
     n.style.filter = 'blur(.2px)';
     return n;
-  });
+  }, 60);
 
-  // Emojis subtle
+  // emojis sutiles
   const emojis = ['⭕','❌','🎁','✨'];
-  const emCount = Math.round(Math.max(10, Math.min(20, (W*H)/180000)));
+  const emCount = Math.round(Math.max(10, Math.min(22, (W*H)/150000)));
   place(bgEmojis, emCount, () => {
     const n = document.createElement('div');
     n.className = 'bg-item emoji';
     n.textContent = emojis[Math.floor(Math.random()*emojis.length)];
     n.style.fontSize = `${14 + Math.floor(Math.random()*36)}px`;
-    n.style.opacity = (0.03 + Math.random()*0.06).toString();
+    n.style.opacity = `${0.03 + Math.random()*0.06}`;
     n.style.transform = `rotate(${(-25 + Math.random()*50).toFixed(1)}deg)`;
     n.style.filter = 'blur(.25px)';
     return n;
-  });
+  }, 50);
 
   bgTridents.style.zIndex = 0;
   bgEmojis.style.zIndex = 0;
 }
 
-// ------------------- Intro UI: ensure loading bar + particles inside intro -------------------
-function ensureIntroUI(){
+/* ---------- Intro particles & loading UI ---------- */
+function ensureIntroElements(){
   introOverlay = introOverlay || by('introOverlay');
   if(!introOverlay) return false;
   introCard = introCard || introOverlay.querySelector('.intro-card');
 
-  // create introParticles container if missing (inside overlay)
   introParticles = by('introParticles');
   if(!introParticles){
     introParticles = document.createElement('div');
@@ -138,21 +140,22 @@ function ensureIntroUI(){
     introOverlay.appendChild(introParticles);
   }
 
-  // create loading UI under logo if missing
   loadingBar = by('loadingBar');
   loadingText = by('loadingText');
+
+  // si HTML ya tiene loadingBar/loadingText no los tocamos, si no, los creamos (fallback)
   if(!loadingBar || !loadingText){
-    // make wrapper
     const outer = document.createElement('div');
     outer.className = 'loading-bar-outer';
-    outer.style.width = '68%';
-    outer.style.maxWidth = '520px';
+    outer.style.width = '72%';
+    outer.style.maxWidth = '560px';
     outer.style.height = '12px';
     outer.style.background = 'rgba(0,0,0,0.12)';
-    outer.style.borderRadius = '8px';
+    outer.style.borderRadius = '10px';
     outer.style.overflow = 'hidden';
     outer.style.marginTop = '12px';
     outer.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.04)';
+    outer.style.alignSelf = 'center';
 
     const inner = document.createElement('div');
     inner.id = 'loadingBar';
@@ -161,7 +164,6 @@ function ensureIntroUI(){
     inner.style.width = '0%';
     inner.style.background = 'linear-gradient(90deg, #ffd9b3, var(--orange-bright))';
     inner.style.borderRadius = '8px';
-    inner.style.transition = 'width .08s linear';
     outer.appendChild(inner);
 
     const text = document.createElement('div');
@@ -173,7 +175,6 @@ function ensureIntroUI(){
     text.style.textAlign = 'center';
     text.textContent = 'Cargando el juego... 0%';
 
-    // insert after logo inside introCard if present
     if(introCard){
       const logo = introCard.querySelector('#introLogo') || introCard.querySelector('img');
       if(logo && logo.parentNode === introCard){
@@ -184,7 +185,6 @@ function ensureIntroUI(){
         introCard.appendChild(text);
       }
     } else {
-      // fallback: append to overlay
       introOverlay.appendChild(outer);
       introOverlay.appendChild(text);
     }
@@ -196,31 +196,52 @@ function ensureIntroUI(){
   return true;
 }
 
-// ------------------- Loading animation -------------------
+function populateIntroParticles(){
+  if(!introOverlay) return;
+  ensureIntroElements();
+  if(!introParticles) return;
+  introParticles.innerHTML = '';
+  const rect = introOverlay.getBoundingClientRect();
+  const count = 12;
+  for(let i=0;i<count;i++){
+    const span = document.createElement('div');
+    span.className = 'bg-item trident';
+    span.textContent = '🔱';
+    span.style.position = 'absolute';
+    span.style.left = `${Math.random() * rect.width}px`;
+    span.style.top = `${Math.random() * rect.height}px`;
+    span.style.fontSize = `${12 + Math.round(Math.random()*22)}px`;
+    span.style.opacity = `${0.04 + Math.random()*0.06}`;
+    span.style.transform = `rotate(${(-20 + Math.random()*40).toFixed(1)}deg)`;
+    span.style.filter = 'blur(.25px)';
+    introParticles.appendChild(span);
+  }
+}
+
+/* ---------- Loading animation ---------- */
 function animateLoading(duration){
-  return new Promise((resolve)=>{
-    if(!ensureIntroUI()){
-      // if no intro markup, just wait
+  return new Promise(resolve=>{
+    if(!ensureIntroElements()){
       setTimeout(resolve, duration);
       return;
     }
     const start = performance.now();
-    function frame(now){
+    function step(now){
       const pct = Math.min(1, (now - start) / duration);
       const p = Math.round(pct * 100);
       if(loadingBar) loadingBar.style.width = `${p}%`;
       if(loadingText) loadingText.textContent = `Cargando el juego... ${p}%`;
-      if(pct < 1) requestAnimationFrame(frame);
+      if(pct < 1) requestAnimationFrame(step);
       else {
         if(loadingText) loadingText.textContent = 'Listo';
-        setTimeout(resolve, 220);
+        setTimeout(resolve, 240);
       }
     }
-    requestAnimationFrame(frame);
+    requestAnimationFrame(step);
   });
 }
 
-// ------------------- Flow: intro -> load -> banner -> auto start -------------------
+/* ---------- Banner control ---------- */
 function attachStartListener(){
   startBtn = startBtn || by('startBtn');
   if(!startBtn) return;
@@ -231,86 +252,44 @@ function attachStartListener(){
   startBtn.disabled = false;
   startBtn.classList.remove('disabled');
 }
-
 function showBanner(){ const b = by('opponentBanner'); if(!b) return; b.classList.remove('hidden'); b.setAttribute('aria-hidden','false'); }
 function hideBanner(){ const b = by('opponentBanner'); if(!b) return; b.classList.add('hidden'); b.setAttribute('aria-hidden','true'); }
 
-// Reemplaza la función showIntroThenProceed en script.js por esta versión
+/* ---------- Flow: intro -> loading -> show banner (WAIT for click) ---------- */
 async function showIntroThenProceed(){
   introOverlay = introOverlay || by('introOverlay');
   introCard = introCard || (introOverlay && introOverlay.querySelector('.intro-card'));
 
   if(!introOverlay){
-    // Si no hay overlay, mostramos el banner para mantener flujo
     attachStartListener();
     showBanner();
     return;
   }
 
-  // Mostrar intro y partículas
+  // show intro & populate backgrounds
   introOverlay.classList.remove('hidden');
   introOverlay.setAttribute('aria-hidden','false');
+  populateBackground();
+  populateIntroParticles();
 
-  // Asegurar fondo y partículas
-  try { populateBackground(); } catch(e){ dbg('populateBackground error', e); }
-  try { populateIntroParticles(); } catch(e){ dbg('populateIntroParticles error', e); }
-
-  // Animar la barra de carga
+  // animate loading
   try {
     await animateLoading(INTRO_DURATION);
   } catch(e){
-    console.error('animateLoading error:', e);
+    console.error('animateLoading', e);
   }
 
-  // Ocultar intro
+  // hide intro and show banner (no auto-start)
   introOverlay.classList.add('hidden');
   introOverlay.setAttribute('aria-hidden','true');
-
-  // Mostrar cartel del oponente y esperar que el usuario presione "Comenzar"
-  attachStartListener(); // habilita/asegura el listener del botón
+  attachStartListener();
   showBanner();
-
-  dbg('Intro finalizado — mostrando banner. Esperando que el usuario presione "Comenzar".');
+  dbg('Intro finished - waiting for user to press "Comenzar"');
 }
 
-// ------------------- Populate intro particles (in overlay) -------------------
-function populateIntroParticles(){
-  if(!introOverlay) return;
-  introParticles = by('introParticles');
-  if(!introParticles){
-    introParticles = document.createElement('div');
-    introParticles.id = 'introParticles';
-    introParticles.style.position = 'absolute';
-    introParticles.style.inset = '0';
-    introParticles.style.pointerEvents = 'none';
-    introOverlay.appendChild(introParticles);
-  }
-  introParticles.innerHTML = '';
-  const rect = introOverlay.getBoundingClientRect();
-  const count = 12;
-  for(let i=0;i<count;i++){
-    const size = 12 + Math.round(Math.random()*26);
-    const opacity = 0.04 + Math.random()*0.06; // even more atenuado
-    const rot = (-20 + Math.random()*40).toFixed(1);
-    const px = Math.random() * rect.width;
-    const py = Math.random() * rect.height;
-    const span = document.createElement('div');
-    span.className = 'bg-item trident';
-    span.textContent = '🔱';
-    span.style.position = 'absolute';
-    span.style.left = `${px}px`;
-    span.style.top = `${py}px`;
-    span.style.fontSize = `${size}px`;
-    span.style.opacity = `${opacity}`;
-    span.style.transform = `rotate(${rot}deg)`;
-    span.style.filter = 'blur(.25px)';
-    introParticles.appendChild(span);
-  }
-}
-
-// ------------------- Init -------------------
+/* ---------- Init ---------- */
 document.addEventListener('DOMContentLoaded', async ()=>{
-  // cache refs
+  // refs
   boardEl = by('board');
   cells = Array.from(document.querySelectorAll('.cell'));
   messageEl = by('message');
@@ -323,16 +302,11 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   restartBtn = by('restartBtn');
   pickX = by('pickX'); pickO = by('pickO');
 
-  playerWinsEl = by('playerWins');
-  cpuWinsEl = by('cpuWins');
-  playerBonusPercentEl = by('playerBonusPercent');
-  cpuBonusPercentEl = by('cpuBonusPercent');
+  playerWinsEl = by('playerWins'); cpuWinsEl = by('cpuWins');
+  playerBonusPercentEl = by('playerBonusPercent'); cpuBonusPercentEl = by('cpuBonusPercent');
   playsLeftEl = by('playsLeft');
 
-  resultModal = by('resultModal');
-  modalPercent = by('modalPercent');
-  modalMessage = by('modalMessage');
-  modalClose = by('modalClose');
+  resultModal = by('resultModal'); modalPercent = by('modalPercent'); modalMessage = by('modalMessage'); modalClose = by('modalClose');
 
   boardLogo = by('boardLogo');
 
@@ -347,6 +321,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   if(restartBtn) restartBtn.addEventListener('click', resetGame);
   if(modalClose) modalClose.addEventListener('click', hideModal);
   cells.forEach(c => c.addEventListener('click', onCellClick));
+
   document.addEventListener('keydown', (e)=> {
     if(e.key === 'Enter' && !sessionStarted && opponentBanner && !opponentBanner.classList.contains('hidden')){
       hideBanner();
@@ -370,8 +345,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   dbg('Init complete');
 });
 
-// ------------------- Juego: funciones existentes (sin cambios funcionales) -------------------
-// ... mantengo las funciones del juego tal como las tenías (startGame, onCellClick, cpu, handleEnd, etc.)
+/* ---------- Juego: lógica (sin cambios funcionales) ---------- */
 function showBoardLogo(){ if(!boardLogo) return; boardLogo.classList.remove('hidden'); boardLogo.style.display='block'; }
 function hideBoardLogo(){ if(!boardLogo) return; boardLogo.classList.add('hidden'); boardLogo.style.display='none'; }
 
