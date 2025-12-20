@@ -1,5 +1,5 @@
 // Tatetí - Jugador vs CPU
-// Implementación con límite de 3 partidas por dispositivo y bono según victorias.
+// CPU ligeramente más fácil, siempre empieza el jugador, sin selector de dificultad.
 
 // Constantes
 const WIN_COMBINATIONS = [
@@ -17,7 +17,6 @@ const messageEl = document.getElementById('message');
 
 const pickX = document.getElementById('pickX');
 const pickO = document.getElementById('pickO');
-const whoStarts = document.getElementById('whoStarts');
 const startBtn = document.getElementById('startBtn');
 const restartBtn = document.getElementById('restartBtn');
 
@@ -117,9 +116,11 @@ function startGame(){
   }
   resetBoardUI();
   board = Array(9).fill(null);
-  currentTurn = whoStarts.value === 'player' ? playerSymbol : cpuSymbol;
+  // Siempre empieza el jugador
+  currentTurn = playerSymbol;
   running = true;
   message(`Juego iniciado — Tú: ${playerSymbol}  |  CPU: ${cpuSymbol}`);
+  // Si por alguna razón currentTurn fuese cpuSymbol (no debería), ejecutar CPU
   if(currentTurn === cpuSymbol){
     doCpuTurn();
   }
@@ -174,7 +175,7 @@ function doCpuTurn(){
   cpuThinking = true;
   message('CPU está pensando...');
   setTimeout(()=>{
-    const move = cpuIntermediateMove();
+    const move = cpuEasierIntermediateMove();
     if(move !== undefined && move !== null){
       makeMove(move, cpuSymbol);
     }
@@ -183,19 +184,22 @@ function doCpuTurn(){
   }, 420);
 }
 
-// CPU: intermedio entre fácil y medio
-function cpuIntermediateMove(){
+// CPU: un poquito más fácil que antes (probabilidad heurística reducida)
+function cpuEasierIntermediateMove(){
   // 1) Si puede ganar, gana
   let move = findWinningMove(board, cpuSymbol);
   if(move !== null) return move;
   // 2) Si el jugador puede ganar, bloquear
   move = findWinningMove(board, playerSymbol);
   if(move !== null) return move;
-  // 3) Heurística con probabilidad: centro/esquinas (60% prob)
-  if(Math.random() < 0.6){
+  // 3) Heurística con probabilidad: centro/esquinas (45% prob — antes 60%)
+  if(Math.random() < 0.45){
     if(board[4] === null) return 4;
     const corners = [0,2,6,8].filter(i => board[i] === null);
     if(corners.length) return corners[Math.floor(Math.random()*corners.length)];
+    // si no hay esquinas, tomar un lateral
+    const sides = [1,3,5,7].filter(i => board[i] === null);
+    if(sides.length) return sides[Math.floor(Math.random()*sides.length)];
   }
   // 4) Random
   return cpuRandomMove();
