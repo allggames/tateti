@@ -1,6 +1,5 @@
 // Tatetí - Jugador vs NEXUS (CPU)
-// Versión actualizada: por defecto NEXUS = ⭕ (cpu 'O') y USUARIO = ❌ (player 'X').
-// Robusta: inicializa en DOMContentLoaded, listeners defensivos y manejo del banner sólido.
+// Ahora con Intro (logo2) y footer logo (logo) controlados por el script.
 
 // Config
 const cpuName = 'NEXUS';
@@ -14,20 +13,20 @@ const STORAGE_KEY = 'tatetiState_v2';
 
 // Estado runtime y persistente
 let board = Array(9).fill(null);
-// DEFAULTS: usuario = ❌ -> 'X', NEXUS = ⭕ -> 'O'
-let playerSymbol = 'X';
-let cpuSymbol = 'O';
+let playerSymbol = 'X'; // usuario = ❌
+let cpuSymbol = 'O';    // NEXUS = ⭕
 let currentTurn = 'X';
 let running = false;
 let cpuThinking = false;
 let sessionStarted = false;
 let state = { playerWins: 0, cpuWins: 0, plays: 0 };
 
-// Elementos DOM (se asignan en DOMContentLoaded)
+// Elementos DOM
 let boardEl, cells, messageEl;
-let opponentBanner, pickX, pickO, startBtn, restartBtn;
+let introOverlay, introContinue, opponentBanner, pickX, pickO, startBtn, restartBtn;
 let playerWinsEl, cpuWinsEl, playerBonusPercentEl, cpuBonusPercentEl, playsLeftEl;
 let resultModal, modalPercent, modalMessage, modalClose;
+let footerLogo;
 
 // Map internal symbol to emoji
 function symbolToEmoji(sym){
@@ -36,16 +35,18 @@ function symbolToEmoji(sym){
   return sym;
 }
 
-// Ejecutar cuando DOM esté listo
+// DOMContentLoaded init
 document.addEventListener('DOMContentLoaded', () => {
-  // Referencias DOM
   boardEl = document.getElementById('board');
   cells = Array.from(document.querySelectorAll('.cell'));
   messageEl = document.getElementById('message');
 
+  introOverlay = document.getElementById('introOverlay');
+  introContinue = document.getElementById('introContinue');
+
   opponentBanner = document.getElementById('opponentBanner');
-  pickX = document.getElementById('pickX'); // visual botón para ❌ (usuario)
-  pickO = document.getElementById('pickO'); // visual botón para ⭕
+  pickX = document.getElementById('pickX');
+  pickO = document.getElementById('pickO');
   startBtn = document.getElementById('startBtn');
   restartBtn = document.getElementById('restartBtn');
 
@@ -60,45 +61,69 @@ document.addEventListener('DOMContentLoaded', () => {
   modalMessage = document.getElementById('modalMessage');
   modalClose = document.getElementById('modalClose');
 
-  // Seguridad: comprobar elementos mínimos
+  footerLogo = document.getElementById('footerLogo');
+
+  // Safety
   if(!boardEl || !cells.length || !messageEl){
     console.error('Elementos del tablero faltantes. Revisá el HTML.');
     return;
   }
 
-  // Inicializar banner text si existe
-  if(opponentBanner){
-    const txtEl = opponentBanner.querySelector('.opponent-text');
-    if(txtEl) txtEl.textContent = `HOY JUGARÁS CONTRA ${cpuName}🤖`;
-  }
+  // Intro overlay handlers
+  if(introContinue) introContinue.addEventListener('click', () => {
+    hideIntro();
+    // show opponent banner after intro
+    showBanner();
+  });
 
-  // Listeners defensivos
+  // Pick buttons
   if(pickX) pickX.addEventListener('click', () => onPick('X'));
   if(pickO) pickO.addEventListener('click', () => onPick('O'));
-  if(startBtn) startBtn.addEventListener('click', () => { hideBanner(); startGame(); });
+
+  // Banner / start
+  if(startBtn) startBtn.addEventListener('click', () => {
+    hideBanner();
+    startGame();
+  });
+
   if(restartBtn) restartBtn.addEventListener('click', resetGame);
+
+  // Modal close
   if(modalClose) modalClose.addEventListener('click', hideModal);
 
-  // Cells listeners
+  // Cells
   cells.forEach(c => c.addEventListener('click', onCellClick));
 
-  // keyboard: Enter para iniciar si la serie no se inició
+  // keyboard
   document.addEventListener('keydown', (e)=>{
-    if(e.key === 'Enter' && !sessionStarted){
-      hideBanner();
-      startGame();
+    if(e.key === 'Enter'){
+      if(introOverlay && !introOverlay.classList.contains('hidden')){
+        hideIntro();
+        showBanner();
+      } else if(!sessionStarted && opponentBanner && !opponentBanner.classList.contains('hidden')){
+        hideBanner();
+        startGame();
+      }
     }
   });
 
-  // Inicialización UI y estado
+  // Init UI / state
   setActiveChoice();
   loadState();
   resetBoardUI();
-  showBanner();
+
+  // Show intro first (unless user already finished series)
+  if(state.plays >= MAX_PLAYS){
+    // skip intro and banner; show footer only if board visible (here no)
+    hideIntro();
+    hideBanner();
+  } else {
+    showIntro();
+  }
   message('Tocá "Comenzar" para iniciar la serie');
 });
 
-// ---------- storage / UI ----------
+// --------- UI / storage helpers ----------
 function loadState(){
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -127,43 +152,56 @@ function checkPlaysLimitUI(){
     startBtn.classList.add('disabled');
     message('Has alcanzado el máximo de 3 partidas por dispositivo.');
     hideBanner();
+    hideIntro();
+    hideFooterLogo();
   } else {
-    if(sessionStarted){
-      startBtn.disabled = true;
-      startBtn.classList.add('disabled');
-    } else {
-      startBtn.disabled = false;
-      startBtn.classList.remove('disabled');
-      showBanner();
-    }
+    if(sessionStarted){ startBtn.disabled = true; startBtn.classList.add('disabled'); }
+    else { startBtn.disabled = false; startBtn.classList.remove('disabled'); }
   }
 }
 
 function setActiveChoice(){
   if(!pickX || !pickO) return;
-  // pickX visual = ❌ -> corresponds to internal 'X'
   pickX.classList.toggle('active', playerSymbol === 'X');
   pickO.classList.toggle('active', playerSymbol === 'O');
 }
 
+// --------- intro / banner / footer control ----------
+function showIntro(){
+  if(!introOverlay) return;
+  introOverlay.classList.remove('hidden');
+  introOverlay.setAttribute('aria-hidden', 'false');
+  // hide banner while intro is visible
+  if(opponentBanner) opponentBanner.classList.add('hidden');
+  hideFooterLogo();
+}
+function hideIntro(){
+  if(!introOverlay) return;
+  introOverlay.classList.add('hidden');
+  introOverlay.setAttribute('aria-hidden', 'true');
+}
 function showBanner(){
   if(!opponentBanner) return;
-  if(!sessionStarted && state.plays < MAX_PLAYS){
-    opponentBanner.classList.remove('hidden');
-    opponentBanner.setAttribute('aria-hidden', 'false');
-  } else {
-    opponentBanner.classList.add('hidden');
-    opponentBanner.setAttribute('aria-hidden', 'true');
-  }
+  opponentBanner.classList.remove('hidden');
+  opponentBanner.setAttribute('aria-hidden', 'false');
 }
 function hideBanner(){
   if(!opponentBanner) return;
   opponentBanner.classList.add('hidden');
   opponentBanner.setAttribute('aria-hidden', 'true');
 }
-function message(text){ if(messageEl) messageEl.textContent = text; }
+function showFooterLogo(){
+  if(!footerLogo) return;
+  footerLogo.classList.remove('hidden');
+  footerLogo.style.display = '';
+}
+function hideFooterLogo(){
+  if(!footerLogo) return;
+  footerLogo.classList.add('hidden');
+  footerLogo.style.display = 'none';
+}
 
-// ---------- pick ----------
+// --------- picks ----------
 function onPick(sym){
   if(sessionStarted) return;
   if(sym === 'X'){ playerSymbol = 'X'; cpuSymbol = 'O'; }
@@ -171,12 +209,12 @@ function onPick(sym){
   setActiveChoice();
 }
 
-// ---------- tablero ----------
+// --------- board helpers ----------
 function resetBoardUI(){
   cells.forEach(c => { c.innerHTML = ''; c.classList.remove('disabled','win'); c.disabled = false; });
 }
 
-// ---------- juego ----------
+// --------- game ----------
 function startGame(){
   if(state.plays >= MAX_PLAYS){ message('No puedes comenzar: alcanzaste el límite de 3 partidas por dispositivo.'); return; }
   sessionStarted = true;
@@ -184,9 +222,12 @@ function startGame(){
 
   resetBoardUI();
   board = Array(9).fill(null);
-  currentTurn = playerSymbol; // jugador empieza
+  currentTurn = playerSymbol; // jugador siempre empieza
   running = true;
   message(`Juego iniciado — Tú: ${symbolToEmoji(playerSymbol)}  |  ${cpuName}: ${symbolToEmoji(cpuSymbol)}`);
+
+  // show footer logo when the game (board) is active
+  showFooterLogo();
 }
 
 function resetGame(){
@@ -198,10 +239,13 @@ function resetGame(){
     currentTurn = playerSymbol;
     running = true;
     message('Partida reiniciada — continúa la serie');
+    showFooterLogo();
   } else {
     sessionStarted = false;
-    showBanner();
-    message('Juego reiniciado. Tocá "Comenzar" para empezar la serie');
+    // go back to intro (or banner) so user can start again
+    showIntro();
+    message('Juego reiniciado. Tocá "Continuar" para empezar la serie');
+    hideFooterLogo();
   }
 }
 
@@ -284,7 +328,6 @@ function handleEnd(winner){
   }
 
   cells.forEach(c=>c.classList.add('disabled'));
-
   saveState();
   updateScoreboardUI();
   updatePlaysUI();
@@ -297,6 +340,7 @@ function handleEnd(winner){
       currentTurn = playerSymbol;
       running = true;
       message(`Siguiente partida iniciada — Partida ${state.plays + 1} de ${MAX_PLAYS}`);
+      showFooterLogo();
     }, 900);
   } else {
     setTimeout(()=>{
@@ -304,6 +348,7 @@ function handleEnd(winner){
       if(modalPercent) modalPercent.textContent = `${bp}%`;
       if(modalMessage) modalMessage.textContent = (bp>0) ? `Has obtenido ${bp}% por ${state.playerWins} victoria(s).` : `No obtuviste bono (0 victorias).`;
       showModal();
+      hideFooterLogo();
     }, 700);
   }
 }
