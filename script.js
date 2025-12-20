@@ -1,5 +1,6 @@
 // Tatetí - Jugador vs NEXUS (CPU)
-// Ahora con Intro (logo2) y footer logo (logo) controlados por el script.
+// Intro ahora se muestra como pantalla de inicio y se auto-oculta después de un tiempo.
+// Al ocultar el intro salta directamente el cartel "HOY JUGARÁS CONTRA NEXUS".
 
 // Config
 const cpuName = 'NEXUS';
@@ -10,6 +11,7 @@ const WIN_COMBINATIONS = [
 ];
 const MAX_PLAYS = 3;
 const STORAGE_KEY = 'tatetiState_v2';
+const INTRO_DURATION = 1800; // ms que dura la pantalla de inicio antes de pasar al cartel
 
 // Estado runtime y persistente
 let board = Array(9).fill(null);
@@ -23,7 +25,7 @@ let state = { playerWins: 0, cpuWins: 0, plays: 0 };
 
 // Elementos DOM
 let boardEl, cells, messageEl;
-let introOverlay, introContinue, opponentBanner, pickX, pickO, startBtn, restartBtn;
+let introOverlay, opponentBanner, pickX, pickO, startBtn, restartBtn;
 let playerWinsEl, cpuWinsEl, playerBonusPercentEl, cpuBonusPercentEl, playsLeftEl;
 let resultModal, modalPercent, modalMessage, modalClose;
 let footerLogo;
@@ -42,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
   messageEl = document.getElementById('message');
 
   introOverlay = document.getElementById('introOverlay');
-  introContinue = document.getElementById('introContinue');
 
   opponentBanner = document.getElementById('opponentBanner');
   pickX = document.getElementById('pickX');
@@ -69,14 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // Intro overlay handlers
-  if(introContinue) introContinue.addEventListener('click', () => {
-    hideIntro();
-    // show opponent banner after intro
-    showBanner();
-  });
-
-  // Pick buttons
+  // Picks
   if(pickX) pickX.addEventListener('click', () => onPick('X'));
   if(pickO) pickO.addEventListener('click', () => onPick('O'));
 
@@ -97,10 +91,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // keyboard
   document.addEventListener('keydown', (e)=>{
     if(e.key === 'Enter'){
-      if(introOverlay && !introOverlay.classList.contains('hidden')){
-        hideIntro();
-        showBanner();
-      } else if(!sessionStarted && opponentBanner && !opponentBanner.classList.contains('hidden')){
+      // si intro visible: ignora (auto-hide)
+      if(!sessionStarted && opponentBanner && !opponentBanner.classList.contains('hidden')){
         hideBanner();
         startGame();
       }
@@ -112,66 +104,40 @@ document.addEventListener('DOMContentLoaded', () => {
   loadState();
   resetBoardUI();
 
-  // Show intro first (unless user already finished series)
+  // Show intro first (unless series completed)
   if(state.plays >= MAX_PLAYS){
-    // skip intro and banner; show footer only if board visible (here no)
     hideIntro();
     hideBanner();
+    hideFooterLogo();
   } else {
-    showIntro();
+    showIntroThenBanner();
   }
+
   message('Tocá "Comenzar" para iniciar la serie');
 });
 
-// --------- UI / storage helpers ----------
-function loadState(){
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw) state = JSON.parse(raw);
-  } catch(e){
-    state = { playerWins:0, cpuWins:0, plays:0 };
-  }
-  updateScoreboardUI();
-  updatePlaysUI();
-  checkPlaysLimitUI();
-}
-function saveState(){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){} }
-function updateScoreboardUI(){
-  if(playerWinsEl) playerWinsEl.textContent = `${state.playerWins} / ${MAX_PLAYS}`;
-  if(cpuWinsEl) cpuWinsEl.textContent = `${state.cpuWins} / ${MAX_PLAYS}`;
-  if(playerBonusPercentEl) playerBonusPercentEl.textContent = `Bono: ${bonusPercent(state.playerWins)}%`;
-  if(cpuBonusPercentEl) cpuBonusPercentEl.textContent = `Bono: ${bonusPercent(state.cpuWins)}%`;
-}
-function updatePlaysUI(){ if(playsLeftEl) playsLeftEl.textContent = Math.max(0, MAX_PLAYS - state.plays); }
-function bonusPercent(wins){ if(wins<=0) return 0; if(wins===1) return 100; if(wins===2) return 150; return 200; }
-
-function checkPlaysLimitUI(){
-  if(!startBtn) return;
-  if(state.plays >= MAX_PLAYS){
-    startBtn.disabled = true;
-    startBtn.classList.add('disabled');
-    message('Has alcanzado el máximo de 3 partidas por dispositivo.');
-    hideBanner();
+// --------- intro / banner flow ----------
+function showIntroThenBanner(){
+  showIntro();
+  // auto-hide intro after INTRO_DURATION and show the opponent banner
+  setTimeout(() => {
+    // If user already completed the series while intro shown, skip
+    if(state.plays >= MAX_PLAYS){
+      hideIntro();
+      hideBanner();
+      return;
+    }
     hideIntro();
-    hideFooterLogo();
-  } else {
-    if(sessionStarted){ startBtn.disabled = true; startBtn.classList.add('disabled'); }
-    else { startBtn.disabled = false; startBtn.classList.remove('disabled'); }
-  }
+    // a small delay to ensure hide animation looks smooth
+    setTimeout(() => {
+      showBanner();
+    }, 150);
+  }, INTRO_DURATION);
 }
-
-function setActiveChoice(){
-  if(!pickX || !pickO) return;
-  pickX.classList.toggle('active', playerSymbol === 'X');
-  pickO.classList.toggle('active', playerSymbol === 'O');
-}
-
-// --------- intro / banner / footer control ----------
 function showIntro(){
   if(!introOverlay) return;
   introOverlay.classList.remove('hidden');
   introOverlay.setAttribute('aria-hidden', 'false');
-  // hide banner while intro is visible
   if(opponentBanner) opponentBanner.classList.add('hidden');
   hideFooterLogo();
 }
@@ -180,6 +146,8 @@ function hideIntro(){
   introOverlay.classList.add('hidden');
   introOverlay.setAttribute('aria-hidden', 'true');
 }
+
+// --------- banner / footer control ----------
 function showBanner(){
   if(!opponentBanner) return;
   opponentBanner.classList.remove('hidden');
@@ -201,7 +169,48 @@ function hideFooterLogo(){
   footerLogo.style.display = 'none';
 }
 
-// --------- picks ----------
+// ---------- storage / UI ----------
+function loadState(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) state = JSON.parse(raw);
+  } catch(e){
+    state = { playerWins:0, cpuWins:0, plays:0 };
+  }
+  updateScoreboardUI();
+  updatePlaysUI();
+  checkPlaysLimitUI();
+}
+function saveState(){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){} }
+function updateScoreboardUI(){
+  if(playerWinsEl) playerWinsEl.textContent = `${state.playerWins} / ${MAX_PLAYS}`;
+  if(cpuWinsEl) cpuWinsEl.textContent = `${state.cpuWins} / ${MAX_PLAYS}`;
+  if(playerBonusPercentEl) playerBonusPercentEl.textContent = `Bono: ${bonusPercent(state.playerWins)}%`;
+  if(cpuBonusPercentEl) cpuBonusPercentEl.textContent = `Bono: ${bonusPercent(state.cpuWins)}%`;
+}
+function updatePlaysUI(){ if(playsLeftEl) playsLeftEl.textContent = Math.max(0, MAX_PLAYS - state.plays); }
+function bonusPercent(wins){ if(wins<=0) return 0; if(wins===1) return 100; if(wins===2) return 150; return 200; }
+function checkPlaysLimitUI(){
+  if(!startBtn) return;
+  if(state.plays >= MAX_PLAYS){
+    startBtn.disabled = true;
+    startBtn.classList.add('disabled');
+    message('Has alcanzado el máximo de 3 partidas por dispositivo.');
+    hideBanner();
+    hideIntro();
+    hideFooterLogo();
+  } else {
+    if(sessionStarted){ startBtn.disabled = true; startBtn.classList.add('disabled'); }
+    else { startBtn.disabled = false; startBtn.classList.remove('disabled'); }
+  }
+}
+function setActiveChoice(){
+  if(!pickX || !pickO) return;
+  pickX.classList.toggle('active', playerSymbol === 'X');
+  pickO.classList.toggle('active', playerSymbol === 'O');
+}
+
+// ---------- picks ----------
 function onPick(sym){
   if(sessionStarted) return;
   if(sym === 'X'){ playerSymbol = 'X'; cpuSymbol = 'O'; }
@@ -209,12 +218,12 @@ function onPick(sym){
   setActiveChoice();
 }
 
-// --------- board helpers ----------
+// ---------- tablero ----------
 function resetBoardUI(){
   cells.forEach(c => { c.innerHTML = ''; c.classList.remove('disabled','win'); c.disabled = false; });
 }
 
-// --------- game ----------
+// ---------- juego ----------
 function startGame(){
   if(state.plays >= MAX_PLAYS){ message('No puedes comenzar: alcanzaste el límite de 3 partidas por dispositivo.'); return; }
   sessionStarted = true;
@@ -222,11 +231,10 @@ function startGame(){
 
   resetBoardUI();
   board = Array(9).fill(null);
-  currentTurn = playerSymbol; // jugador siempre empieza
+  currentTurn = playerSymbol; // jugador empieza
   running = true;
   message(`Juego iniciado — Tú: ${symbolToEmoji(playerSymbol)}  |  ${cpuName}: ${symbolToEmoji(cpuSymbol)}`);
 
-  // show footer logo when the game (board) is active
   showFooterLogo();
 }
 
@@ -242,9 +250,8 @@ function resetGame(){
     showFooterLogo();
   } else {
     sessionStarted = false;
-    // go back to intro (or banner) so user can start again
-    showIntro();
-    message('Juego reiniciado. Tocá "Continuar" para empezar la serie');
+    showIntroThenBanner();
+    message('Juego reiniciado. Esperá la presentación para continuar');
     hideFooterLogo();
   }
 }
