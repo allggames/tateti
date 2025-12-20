@@ -1,7 +1,9 @@
-// Tatetí - Jugador vs CPU
-// Fácil (oculto), título y modal actualizado, Start sólo al principio, auto-inicio.
+// Tatetí - Jugador vs NEXUS (CPU)
+// Muy fácil: blockProb reducido a 0.30 y heurProb a 0.05.
+// Start sólo al principio; auto-inicio de partidas; modal final con bono.
 
-// Constantes
+// Config
+const cpuName = 'NEXUS';
 const WIN_COMBINATIONS = [
   [0,1,2],[3,4,5],[6,7,8],
   [0,3,6],[1,4,7],[2,5,8],
@@ -15,6 +17,7 @@ const boardEl = document.getElementById('board');
 const cells = Array.from(document.querySelectorAll('.cell'));
 const messageEl = document.getElementById('message');
 
+const opponentBanner = document.getElementById('opponentBanner');
 const pickX = document.getElementById('pickX');
 const pickO = document.getElementById('pickO');
 const startBtn = document.getElementById('startBtn');
@@ -42,6 +45,9 @@ let sessionStarted = false;
 
 // Estado persistente
 let state = { playerWins: 0, cpuWins: 0, plays: 0 };
+
+// --- inicializar UI ---
+opponentBanner.textContent = `HOY JUGARÁS CONTRA ${cpuName}`;
 
 // --- storage ---
 function loadState(){
@@ -133,7 +139,7 @@ function startGame(){
   board = Array(9).fill(null);
   currentTurn = playerSymbol;
   running = true;
-  message(`Juego iniciado — Tú: ${playerSymbol}  |  CPU: ${cpuSymbol}`);
+  message(`Juego iniciado — Tú: ${playerSymbol}  |  ${cpuName}: ${cpuSymbol}`);
 }
 
 function resetGame(){
@@ -188,9 +194,9 @@ function afterMove(){
 
 function doCpuTurn(){
   cpuThinking = true;
-  message('CPU está pensando...');
+  message(`${cpuName} está pensando...`);
   setTimeout(()=>{
-    const move = cpuVeryEasyMove(); // modo FÁCIL oculto
+    const move = cpuVeryEasyMove(); // modo MUY FÁCIL oculto
     if(move !== undefined && move !== null){
       makeMove(move, cpuSymbol);
     }
@@ -200,11 +206,11 @@ function doCpuTurn(){
 }
 
 // CPU MUY FÁCIL (oculto):
-// - Bloquea al jugador con probabilidad B (0.6) en vez de siempre.
-// - Heurística rara (10%). Resto aleatorio.
+// - Bloquea al jugador con probabilidad blockProb (ahora 0.30).
+// - Heurística muy rara (heurProb = 0.05). Resto aleatorio.
 function cpuVeryEasyMove(){
-  const blockProb = 0.6;
-  const heurProb = 0.10;
+  const blockProb = 0.30; // <<--- reducido para facilitar ganar a NEXUS
+  const heurProb = 0.05;
 
   // 1) Si el jugador puede ganar en una jugada: bloquear con probabilidad blockProb
   const block = findWinningMove(board, playerSymbol);
@@ -270,7 +276,7 @@ function handleEnd(winner){
       message(`¡Ganaste esta partida! 🎉`);
     } else {
       state.cpuWins = Math.min(MAX_PLAYS, state.cpuWins + 1);
-      message(`CPU gana esta partida 😢`);
+      message(`${cpuName} gana esta partida 😢`);
     }
 
     for(const [a,b,c] of WIN_COMBINATIONS){
@@ -301,7 +307,6 @@ function handleEnd(winner){
   } else {
     setTimeout(()=>{
       const bp = bonusPercent(state.playerWins);
-      // Mostrar modal con porcentaje grande
       modalPercent.textContent = `${bp}%`;
       if(bp > 0){
         modalMessage.textContent = `Has obtenido ${bp}% por ${state.playerWins} victoria(s).`;
