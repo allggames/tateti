@@ -1,11 +1,9 @@
-// script.js (editado)
-// Mejoras principales:
-// - populateBackground ahora usa la función placeItems para evitar amontonamientos
-//   y agrega los elementos dentro de #bgTridents y #bgEmojis (no al body).
-// - los elementos de fondo usan clases diferenciadas ('trident' / 'emoji') y estilos
-//   inline para tamaño/rotación/opacidad.
-// - limpieza y pequeñas defensas al regenerar el fondo en resize.
-// - mantiene la lógica del juego tal como la tenías.
+// script.js (editado — listo para copiar/pegar)
+// Cambios principales:
+// - Se asegura que la barra de carga funcione y, al terminar, oculte el intro y muestre el cartel NEXUS.
+// - Se generan 🔱 (tridentes) en la pantalla de INTRO específicamente (dentro de #introOverlay).
+// - populateBackground mantiene los iconos dispersos en el fondo general.
+// - Logging adicional para depuración (console.debug).
 
 const cpuName = 'NEXUS';
 const WIN_COMBINATIONS = [
@@ -15,7 +13,7 @@ const WIN_COMBINATIONS = [
 ];
 const MAX_PLAYS = 3;
 const STORAGE_KEY = 'tatetiState_v2';
-const INTRO_DURATION = 2400;
+const INTRO_DURATION = 1800; // ms (ajustá si querés más/menos tiempo en la intro)
 
 let board = Array(9).fill(null);
 let playerSymbol = 'X';
@@ -28,77 +26,77 @@ let state = { playerWins: 0, cpuWins: 0, plays: 0 };
 
 // DOM refs
 let boardEl, cells, messageEl;
-let introOverlay, loadingBar, loadingText, opponentBanner, pickX, pickO, startBtn, restartBtn;
+let introOverlay, introParticlesContainer, loadingBar, loadingText;
+let opponentBanner, pickX, pickO, startBtn, restartBtn;
 let playerWinsEl, cpuWinsEl, playerBonusPercentEl, cpuBonusPercentEl, playsLeftEl;
 let resultModal, modalPercent, modalMessage, modalClose;
 let boardLogo, bgTridents, bgEmojis;
 
-// util
 function symbolToEmoji(sym){
   if(sym === 'X') return '❌';
   if(sym === 'O') return '⭕';
   return sym;
 }
 
-// Debounce helper
 function debounce(fn, wait=120){
   let t;
   return (...args)=>{ clearTimeout(t); t = setTimeout(()=>fn(...args), wait); };
 }
 
-// --- random background generation ---
-// placeItems: coloca 'count' elementos mediante createElementFactory, evitando colisiones
+/* ------------------- BACKGROUND (global) ------------------- */
 function populateBackground(){
   bgTridents = document.getElementById('bgTridents');
   bgEmojis = document.getElementById('bgEmojis');
-  if(!bgTridents || !bgEmojis) return;
 
-  // clear previous
+  // If not present, create them and append to body (backward-compatibility)
+  if(!bgTridents){
+    bgTridents = document.createElement('div');
+    bgTridents.id = 'bgTridents';
+    document.body.appendChild(bgTridents);
+  }
+  if(!bgEmojis){
+    bgEmojis = document.createElement('div');
+    bgEmojis.id = 'bgEmojis';
+    document.body.appendChild(bgEmojis);
+  }
+
   bgTridents.innerHTML = '';
   bgEmojis.innerHTML = '';
 
   const W = Math.max(window.innerWidth, 800);
   const H = Math.max(window.innerHeight, 600);
 
-  // helper: test distance from existing points
-  function tooClose(x,y,placed,minDist){
-    for(const p of placed){
-      const dx = p.x - x;
-      const dy = p.y - y;
-      if(Math.hypot(dx,dy) < minDist) return true;
-    }
-    return false;
-  }
-
-  // generic placer
-  function placeItems(count, minDist, createNode, container){
+  // small helper to place items with minimal collisions
+  function placeItems(container, count, minDist, factory){
     const placed = [];
     const padding = 24;
     for(let i=0;i<count;i++){
       let attempts = 0;
-      let x = 0, y = 0;
+      let x, y;
+      let ok;
       do {
         x = Math.random() * (W - padding*2) + padding;
         y = Math.random() * (H - padding*2) + padding;
+        ok = true;
+        for(const p of placed){
+          if(Math.hypot(p.x - x, p.y - y) < minDist){ ok = false; break; }
+        }
         attempts++;
-      } while(tooClose(x,y,placed,minDist) && attempts < 40);
+      } while(!ok && attempts < 40);
       placed.push({x,y});
-      const node = createNode(x,y,i);
-      // absolute positioned element inside container (container is fixed inset:0)
+      const node = factory(x,y,i);
       node.style.position = 'absolute';
       node.style.left = `${x}px`;
       node.style.top = `${y}px`;
       node.style.pointerEvents = 'none';
       container.appendChild(node);
     }
-    return placed;
   }
 
-  // create trident nodes
   const tridentCount = Math.round(Math.max(8, Math.min(22, (W*H)/(200000))));
-  placeItems(tridentCount, 90, (x,y,i) => {
-    const size = 10 + Math.floor(Math.random()*20); // 10-30px
-    const opacity = (0.04 + Math.random()*0.08).toFixed(3); // 0.04-0.12
+  placeItems(bgTridents, tridentCount, 90, (x,y,i) => {
+    const size = 10 + Math.floor(Math.random()*20);
+    const opacity = (0.04 + Math.random()*0.08).toFixed(3);
     const rot = (-12 + Math.random()*24).toFixed(1);
     const span = document.createElement('div');
     span.className = 'bg-item trident';
@@ -109,14 +107,13 @@ function populateBackground(){
     span.style.zIndex = 0;
     span.style.filter = 'blur(.2px)';
     return span;
-  }, bgTridents);
+  });
 
-  // create emoji nodes
   const emojis = ['⭕','❌','🎁','✨'];
   const emojiCount = Math.round(Math.max(10, Math.min(20, (W*H)/(180000))));
-  placeItems(emojiCount, 80, (x,y,i) => {
-    const size = 16 + Math.floor(Math.random()*38); // 16-54
-    const opacity = (0.03 + Math.random()*0.08).toFixed(3); // 0.03-0.11
+  placeItems(bgEmojis, emojiCount, 80, (x,y,i) => {
+    const size = 16 + Math.floor(Math.random()*38);
+    const opacity = (0.03 + Math.random()*0.08).toFixed(3);
     const rot = (-25 + Math.random()*50).toFixed(1);
     const span = document.createElement('div');
     span.className = 'bg-item emoji';
@@ -127,23 +124,170 @@ function populateBackground(){
     span.style.zIndex = 0;
     span.style.filter = 'blur(.25px)';
     return span;
-  }, bgEmojis);
+  });
 
-  // ensure bg layers are behind main container (they are fixed with z-index 0)
   bgTridents.style.zIndex = 0;
   bgEmojis.style.zIndex = 0;
 }
 
-// --- Game code (robust) ---
-// Initialize on DOMContentLoaded
-document.addEventListener('DOMContentLoaded', () => {
-  boardEl = document.getElementById('board');
-  cells = Array.from(document.querySelectorAll('.cell'));
-  messageEl = document.getElementById('message');
+/* ------------------- INTRO PARTICLES (inside intro) ------------------- */
+function populateIntroParticles(){
+  // We create tridents around the intro logo area, inside the intro overlay.
+  if(!introOverlay) return;
 
+  // find or create container
+  introParticlesContainer = document.getElementById('introParticles');
+  if(!introParticlesContainer){
+    introParticlesContainer = document.createElement('div');
+    introParticlesContainer.id = 'introParticles';
+    introParticlesContainer.style.position = 'absolute';
+    introParticlesContainer.style.inset = '0';
+    introParticlesContainer.style.pointerEvents = 'none';
+    introOverlay.appendChild(introParticlesContainer);
+  }
+  introParticlesContainer.innerHTML = '';
+
+  const rect = introOverlay.getBoundingClientRect();
+  const W = Math.max(600, rect.width);
+  const H = Math.max(300, rect.height);
+
+  const count = 12; // fixed number for intro
+  for(let i=0;i<count;i++){
+    const size = 14 + Math.round(Math.random()*22); // 14-36
+    const opacity = 0.06 + Math.random()*0.08; // 0.06-0.14
+    const rot = (-20 + Math.random()*40).toFixed(1);
+    // random position biased towards center
+    const px = (rect.width/2) + (Math.random()-0.5) * rect.width * 0.9;
+    const py = (rect.height/2) + (Math.random()-0.5) * rect.height * 0.7;
+
+    const span = document.createElement('div');
+    span.className = 'bg-item trident';
+    span.textContent = '🔱';
+    span.style.position = 'absolute';
+    span.style.left = `${Math.max(8, px)}px`;
+    span.style.top = `${Math.max(8, py)}px`;
+    span.style.fontSize = `${size}px`;
+    span.style.opacity = `${opacity}`;
+    span.style.transform = `rotate(${rot}deg)`;
+    span.style.filter = 'blur(.2px)';
+    introParticlesContainer.appendChild(span);
+  }
+}
+
+/* ------------------- Game logic & flow (robust) ------------------- */
+function attachStartListener(){
+  if(!startBtn) return;
+  startBtn.type = 'button';
+  // remove previous if any
+  try { startBtn.removeEventListener('click', startBtn._handler); } catch(e){}
+  startBtn._handler = () => { hideBanner(); startGame(); };
+  startBtn.addEventListener('click', startBtn._handler);
+  startBtn.disabled = false;
+  startBtn.classList.remove('disabled');
+  console.debug('attachStartListener: attached');
+}
+
+function showIntroThenBanner(){
+  showIntro();
+  // populate intro particles each time we show intro
+  populateIntroParticles();
+  // start loading bar animation and then transition
+  startLoadingBar(INTRO_DURATION).then(()=> {
+    if(state.plays >= MAX_PLAYS){
+      hideIntro();
+      hideBanner();
+      return;
+    }
+    hideIntro();
+    setTimeout(()=> {
+      attachStartListener();
+      showBanner();
+    }, 160);
+  }).catch(err => {
+    console.error('startLoadingBar error', err);
+    // fallback: still hide intro and show banner
+    hideIntro();
+    setTimeout(()=> { attachStartListener(); showBanner(); }, 160);
+  });
+}
+
+function showIntro(){
+  if(!introOverlay) return;
+  introOverlay.classList.remove('hidden');
+  introOverlay.setAttribute('aria-hidden', 'false');
+  if(opponentBanner) opponentBanner.classList.add('hidden');
+  hideBoardLogo();
+  if(loadingBar) loadingBar.style.width = '0%';
+  if(loadingText) loadingText.textContent = 'Cargando el juego...';
+  console.debug('showIntro: shown');
+}
+
+function hideIntro(){
+  if(!introOverlay) return;
+  introOverlay.classList.add('hidden');
+  introOverlay.setAttribute('aria-hidden', 'true');
+  console.debug('hideIntro: hidden');
+}
+
+// loading bar animation returns a Promise
+function startLoadingBar(duration){
+  return new Promise((resolve) => {
+    if(!loadingBar || !loadingText){
+      // if missing, wait duration then resolve
+      setTimeout(resolve, duration);
+      return;
+    }
+    const start = performance.now();
+    function step(now){
+      const elapsed = now - start;
+      const pct = Math.min(1, elapsed / duration);
+      loadingBar.style.width = `${Math.round(pct*100)}%`;
+      loadingText.textContent = `Cargando el juego... ${Math.round(pct*100)}%`;
+      if(pct < 1) requestAnimationFrame(step);
+      else {
+        loadingText.textContent = 'Listo';
+        setTimeout(resolve, 220);
+      }
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+/* Banner helpers */
+function showBanner(){ if(!opponentBanner) return; opponentBanner.classList.remove('hidden'); opponentBanner.setAttribute('aria-hidden','false'); attachStartListener(); console.debug('showBanner'); }
+function hideBanner(){ if(!opponentBanner) return; opponentBanner.classList.add('hidden'); opponentBanner.setAttribute('aria-hidden','true'); }
+
+/* background initial & resize */
+document.addEventListener('DOMContentLoaded', ()=> {
+  // cache DOM refs that might be used by populateBackground/intro
+  bgTridents = document.getElementById('bgTridents');
+  bgEmojis = document.getElementById('bgEmojis');
   introOverlay = document.getElementById('introOverlay');
   loadingBar = document.getElementById('loadingBar');
   loadingText = document.getElementById('loadingText');
+
+  // generate background icons
+  populateBackground();
+  // regenerate on resize
+  window.addEventListener('resize', debounce(()=> {
+    try {
+      if(bgTridents) bgTridents.innerHTML = '';
+      if(bgEmojis) bgEmojis.innerHTML = '';
+      populateBackground();
+      // also reposition intro particles if visible
+      if(introOverlay && !introOverlay.classList.contains('hidden')){
+        populateIntroParticles();
+      }
+    } catch(e){ console.error(e); }
+  }, 220));
+});
+
+/* ---------- Init main UI & game (keeps behavior) ---------- */
+document.addEventListener('DOMContentLoaded', () => {
+  // game elements
+  boardEl = document.getElementById('board');
+  cells = Array.from(document.querySelectorAll('.cell'));
+  messageEl = document.getElementById('message');
 
   opponentBanner = document.getElementById('opponentBanner');
   pickX = document.getElementById('pickX');
@@ -163,22 +307,11 @@ document.addEventListener('DOMContentLoaded', () => {
   modalClose = document.getElementById('modalClose');
 
   boardLogo = document.getElementById('boardLogo');
-  bgTridents = document.getElementById('bgTridents');
-  bgEmojis = document.getElementById('bgEmojis');
 
   if(!boardEl || !cells.length || !messageEl){
     console.error('FATAL: elementos del tablero faltantes.');
     return;
   }
-
-  // populate background initially
-  populateBackground();
-  // regenerate on resize (debounced)
-  window.addEventListener('resize', debounce(()=>{
-    if(bgTridents) bgTridents.innerHTML = '';
-    if(bgEmojis) bgEmojis.innerHTML = '';
-    populateBackground();
-  }, 220));
 
   // UI listeners
   if(pickX) pickX.addEventListener('click', () => onPick('X'));
@@ -187,7 +320,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if(modalClose) modalClose.addEventListener('click', hideModal);
   cells.forEach(c => c.addEventListener('click', onCellClick));
 
-  // keyboard
   document.addEventListener('keydown', (e)=> {
     if(e.key === 'Enter' && !sessionStarted && opponentBanner && !opponentBanner.classList.contains('hidden')){
       hideBanner();
@@ -204,118 +336,34 @@ document.addEventListener('DOMContentLoaded', () => {
     hideBanner();
     hideBoardLogo();
   } else {
+    // show intro then banner (this will also populate intro tridents)
     showIntroThenBanner();
   }
 
   attachStartListener();
-
-  // debug
-  console.debug('Background populated and init done');
+  console.debug('Game init done');
 });
 
-// --- small helpers to show/hide the board logo below the grid ---
-function showBoardLogo(){
-  if(!boardLogo) return;
-  boardLogo.classList.remove('hidden');
-  boardLogo.style.display = 'block';
-}
-function hideBoardLogo(){
-  if(!boardLogo) return;
-  boardLogo.classList.add('hidden');
-  boardLogo.style.display = 'none';
-}
+/* ---------- Remaining game logic (unchanged) ---------- */
 
-// --- Start listener (robust) ---
-let _startHandler = null;
-function attachStartListener(){
-  if(!startBtn) return;
-  startBtn.type = 'button';
-  if(_startHandler) startBtn.removeEventListener('click', _startHandler);
-  _startHandler = ()=>{ hideBanner(); startGame(); };
-  startBtn.addEventListener('click', _startHandler);
-  startBtn.disabled = false;
-  startBtn.classList.remove('disabled');
-}
+function showBoardLogo(){ if(!boardLogo) return; boardLogo.classList.remove('hidden'); boardLogo.style.display = 'block'; }
+function hideBoardLogo(){ if(!boardLogo) return; boardLogo.classList.add('hidden'); boardLogo.style.display = 'none'; }
 
-// --- intro/banner flow (uses loading bar) ---
-function showIntroThenBanner(){
-  showIntro();
-  startLoadingBar(INTRO_DURATION).then(()=> {
-    if(state.plays >= MAX_PLAYS){
-      hideIntro();
-      hideBanner();
-      return;
-    }
-    hideIntro();
-    setTimeout(()=> showBanner(), 160);
-  });
-}
-function showIntro(){
-  if(!introOverlay) return;
-  introOverlay.classList.remove('hidden');
-  introOverlay.setAttribute('aria-hidden','false');
-  if(opponentBanner) opponentBanner.classList.add('hidden');
-  hideBoardLogo();
-  if(loadingBar) loadingBar.style.width = '0%';
-  if(loadingText) loadingText.textContent = 'Cargando el juego...';
-}
-function hideIntro(){
-  if(!introOverlay) return;
-  introOverlay.classList.add('hidden');
-  introOverlay.setAttribute('aria-hidden','true');
-}
-function startLoadingBar(duration){
-  return new Promise(resolve=>{
-    if(!loadingBar){ setTimeout(resolve, duration); return; }
-    const start = performance.now();
-    function tick(now){
-      const elapsed = now - start;
-      const pct = Math.min(1, elapsed / duration);
-      loadingBar.style.width = (pct * 100) + '%';
-      if(loadingText) loadingText.textContent = `Cargando el juego... ${Math.round(pct*100)}%`;
-      if(pct < 1) requestAnimationFrame(tick);
-      else setTimeout(()=> { if(loadingText) loadingText.textContent = 'Listo'; resolve(); }, 220);
-    }
-    requestAnimationFrame(tick);
-  });
-}
-
-// --- banner control ---
-function showBanner(){ if(!opponentBanner) return; opponentBanner.classList.remove('hidden'); opponentBanner.setAttribute('aria-hidden','false'); attachStartListener(); }
-function hideBanner(){ if(!opponentBanner) return; opponentBanner.classList.add('hidden'); opponentBanner.setAttribute('aria-hidden','true'); }
-
-// --- storage / UI helpers (same) ---
 function loadState(){ try { const raw = localStorage.getItem(STORAGE_KEY); if(raw) state = JSON.parse(raw); } catch(e){ state = { playerWins:0, cpuWins:0, plays:0 }; } updateScoreboardUI(); updatePlaysUI(); checkPlaysLimitUI(); }
 function saveState(){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){} }
 function updateScoreboardUI(){ if(playerWinsEl) playerWinsEl.textContent = `${state.playerWins} / ${MAX_PLAYS}`; if(cpuWinsEl) cpuWinsEl.textContent = `${state.cpuWins} / ${MAX_PLAYS}`; if(playerBonusPercentEl) playerBonusPercentEl.textContent = `Bono: ${bonusPercent(state.playerWins)}%`; if(cpuBonusPercentEl) cpuBonusPercentEl.textContent = `Bono: ${bonusPercent(state.cpuWins)}%`; }
 function updatePlaysUI(){ if(playsLeftEl) playsLeftEl.textContent = Math.max(0, MAX_PLAYS - state.plays); }
 function bonusPercent(wins){ if(wins<=0) return 0; if(wins===1) return 100; if(wins===2) return 150; return 200; }
-function checkPlaysLimitUI(){
-  if(!startBtn) return;
-  if(state.plays >= MAX_PLAYS){
-    startBtn.disabled = true;
-    startBtn.classList.add('disabled');
-    message('Has alcanzado el máximo de 3 partidas por dispositivo.');
-    hideBanner();
-    hideIntro();
-    hideBoardLogo();
-  } else {
-    if(sessionStarted){ startBtn.disabled = true; startBtn.classList.add('disabled'); }
-    else { startBtn.disabled = false; startBtn.classList.remove('disabled'); }
-  }
-}
+function checkPlaysLimitUI(){ if(!startBtn) return; if(state.plays >= MAX_PLAYS){ startBtn.disabled = true; startBtn.classList.add('disabled'); message('Has alcanzado el máximo de 3 partidas por dispositivo.'); hideBanner(); hideIntro(); hideBoardLogo(); } else { if(sessionStarted){ startBtn.disabled = true; startBtn.classList.add('disabled'); } else { startBtn.disabled = false; startBtn.classList.remove('disabled'); } } }
 function setActiveChoice(){ if(!pickX || !pickO) return; pickX.classList.toggle('active', playerSymbol === 'X'); pickO.classList.toggle('active', playerSymbol === 'O'); }
 
-// --- picks / board UI ---
 function onPick(sym){ if(sessionStarted) return; if(sym === 'X'){ playerSymbol='X'; cpuSymbol='O'; } else { playerSymbol='O'; cpuSymbol='X'; } setActiveChoice(); }
 function resetBoardUI(){ cells.forEach(c => { c.innerHTML = ''; c.classList.remove('disabled','win'); c.disabled = false; }); }
 
-// --- game logic (same behavior) ---
 function startGame(){
   if(state.plays >= MAX_PLAYS){ message('No puedes comenzar: alcanzaste el límite de 3 partidas por dispositivo.'); return; }
   sessionStarted = true;
   checkPlaysLimitUI();
-
   resetBoardUI();
   board = Array(9).fill(null);
   currentTurn = playerSymbol;
@@ -345,8 +393,7 @@ function resetGame(){
 
 function onCellClick(e){
   if(!running || cpuThinking) return;
-  const el = e.currentTarget;
-  const idx = Number(el.dataset.index);
+  const idx = Number(e.currentTarget.dataset.index);
   if(Number.isNaN(idx)) return;
   if(board[idx]) return;
   if(currentTurn !== playerSymbol) return;
@@ -355,19 +402,14 @@ function onCellClick(e){
   afterMove();
 
   setTimeout(()=>{
-    if(running && !cpuThinking && currentTurn === cpuSymbol){
-      doCpuTurn();
-    }
+    if(running && !cpuThinking && currentTurn === cpuSymbol) doCpuTurn();
   }, 350);
 }
 
 function makeMove(index, symbol){
   board[index] = symbol;
   const cell = cells[index];
-  if(cell){
-    cell.innerHTML = `<span>${symbolToEmoji(symbol)}</span>`;
-    cell.classList.add('disabled');
-  }
+  if(cell){ cell.innerHTML = `<span>${symbolToEmoji(symbol)}</span>`; cell.classList.add('disabled'); }
 }
 
 function afterMove(){
@@ -377,7 +419,6 @@ function afterMove(){
   if(running && currentTurn === cpuSymbol) doCpuTurn();
 }
 
-// CPU
 function doCpuTurn(){
   cpuThinking = true;
   message(`${cpuName} está pensando...`);
@@ -406,7 +447,6 @@ function cpuRandomMove(){ const avail = availableMoves(board); if(avail.length =
 function availableMoves(b){ return b.map((v,i)=> v===null?i:null).filter(v=>v!==null); }
 function findWinningMove(b, symbol){ for(const i of availableMoves(b)){ b[i] = symbol; const w = checkWinner(b); b[i] = null; if(w === symbol) return i; } return null; }
 
-// winner / end
 function checkWinner(b){ for(const [a,b1,c] of WIN_COMBINATIONS){ if(b[a] && b[a] === b[b1] && b[a] === b[c]) return b[a]; } if(b.every(v=>v!==null)) return 'D'; return null; }
 
 function handleEnd(winner){
@@ -451,11 +491,8 @@ function handleEnd(winner){
   }
 }
 
-// modal
 function showModal(){ if(resultModal) resultModal.classList.remove('hidden'); }
 function hideModal(){ if(resultModal) resultModal.classList.add('hidden'); }
 
-// utilities
 function message(text){ if(messageEl) messageEl.textContent = text; }
 function bonusPercent(wins){ if(wins<=0) return 0; if(wins===1) return 100; if(wins===2) return 150; return 200; }
-
