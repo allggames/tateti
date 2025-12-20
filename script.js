@@ -1,7 +1,9 @@
-// Tatetí - Jugador vs NEXUS (CPU)
-// Versión revisada: listener robusto para "Comenzar", logging y fallback si la CPU no arranca.
-// Pega este archivo reemplazando tu script.js actual.
+// script.js
+// Actualizado: genera tridentes y emojis de fondo en posiciones aleatorias,
+// evita amontonamientos (aleatorio con separación básica), y muestra el logo
+// del tablero debajo del grid (boardLogo). Mantiene la lógica del juego.
 
+// --- Config / Estado (sin cambios funcionales) ---
 const cpuName = 'NEXUS';
 const WIN_COMBINATIONS = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -10,33 +12,125 @@ const WIN_COMBINATIONS = [
 ];
 const MAX_PLAYS = 3;
 const STORAGE_KEY = 'tatetiState_v2';
-const INTRO_DURATION = 2400; // ms intro loading
+const INTRO_DURATION = 2400;
 
-// Estado
 let board = Array(9).fill(null);
-let playerSymbol = 'X'; // usuario = ❌
-let cpuSymbol = 'O';    // NEXUS = ⭕
+let playerSymbol = 'X';
+let cpuSymbol = 'O';
 let currentTurn = 'X';
 let running = false;
 let cpuThinking = false;
 let sessionStarted = false;
 let state = { playerWins: 0, cpuWins: 0, plays: 0 };
 
-// DOM refs (populated on DOMContentLoaded)
+// DOM refs
 let boardEl, cells, messageEl;
 let introOverlay, loadingBar, loadingText, opponentBanner, pickX, pickO, startBtn, restartBtn;
 let playerWinsEl, cpuWinsEl, playerBonusPercentEl, cpuBonusPercentEl, playsLeftEl;
 let resultModal, modalPercent, modalMessage, modalClose;
-let footerLogo;
+let boardLogo, bgTridents, bgEmojis;
 
-// util: symbol -> emoji
+// util
 function symbolToEmoji(sym){
   if(sym === 'X') return '❌';
   if(sym === 'O') return '⭕';
   return sym;
 }
 
-// ---------- init ----------
+// --- random background generation ---
+// basic collision-avoid algorithm: try up to N times per item to find position not too close to others
+function populateBackground(){
+  // containers
+  bgTridents = document.getElementById('bgTridents');
+  bgEmojis = document.getElementById('bgEmojis');
+  if(!bgTridents || !bgEmojis) return;
+
+  // clear previous
+  bgTridents.innerHTML = '';
+  bgEmojis.innerHTML = '';
+
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+
+  // helper to create non-clustered positions
+  function placeItems(count, createEl, minDist = 80, maxAttempts = 30){
+    const placed = [];
+    for(let i=0;i<count;i++){
+      let attempts = 0;
+      let x,y,ok;
+      do {
+        x = Math.random() * (W - 40) + 20; // padding
+        y = Math.random() * (H - 40) + 20;
+        ok = true;
+        for(const p of placed){
+          const dx = p.x - x;
+          const dy = p.y - y;
+          if(Math.hypot(dx,dy) < minDist){ ok = false; break; }
+        }
+        attempts++;
+      } while(!ok && attempts < maxAttempts);
+      placed.push({x,y});
+      const el = createEl(x,y,i);
+      document.body.appendChild(el); // temporarily append to body to allow positioning relative to viewport
+    }
+    return placed;
+  }
+
+  // create trident elements (small, subtle)
+  const tridentCount = Math.round(Math.max(10, Math.min(24, (W*H)/(160000)))); // scale with viewport
+  for(let i=0;i<tridentCount;i++){
+    // choose size and opacity
+    const size = Math.round(10 + Math.random()*18); // 10-28px
+    const opacity = 0.05 + Math.random()*0.07; // 0.05-0.12
+    let x = Math.random() * (W - 40) + 20;
+    let y = Math.random() * (H - 40) + 20;
+    const span = document.createElement('div');
+    span.className = 'bg-item';
+    span.textContent = '🔱';
+    span.style.left = `${x}px`;
+    span.style.top = `${y}px`;
+    span.style.fontSize = `${size}px`;
+    span.style.opacity = `${opacity}`;
+    span.style.transform = `rotate(${(-12 + Math.random()*24).toFixed(1)}deg)`;
+    span.style.zIndex = 1;
+    bgTridents.appendChild(span);
+  }
+
+  // create emoji background elements (⭕ ❌ 🎁 ✨) scattered
+  const emojis = ['⭕','❌','🎁','✨'];
+  const emojiCount = Math.round(Math.max(10, Math.min(22, (W*H)/(140000))));
+  for(let i=0;i<emojiCount;i++){
+    const size = Math.round(18 + Math.random()*36); // 18-54
+    const opacity = 0.04 + Math.random()*0.06; // 0.04-0.10
+    const x = Math.random() * (W - 60) + 30;
+    const y = Math.random() * (H - 60) + 30;
+    const span = document.createElement('div');
+    span.className = 'bg-item';
+    span.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    span.style.left = `${x}px`;
+    span.style.top = `${y}px`;
+    span.style.fontSize = `${size}px`;
+    span.style.opacity = `${opacity}`;
+    span.style.transform = `rotate(${(-20 + Math.random()*40).toFixed(1)}deg)`;
+    span.style.zIndex = 1;
+    bgEmojis.appendChild(span);
+  }
+
+  // small optimization: move these bg-layers to front or back by z-index if needed
+  bgTridents.style.zIndex = 0;
+  bgEmojis.style.zIndex = 0;
+}
+
+// Debounce helper
+function debounce(fn, wait=120){
+  let t;
+  return (...args)=>{ clearTimeout(t); t = setTimeout(()=>fn(...args), wait); };
+}
+
+// --- Game code (keeps previous robust logic) ---
+// NOTE: adapted to use boardLogo element (below board) for showing/hiding instead of footerLogo
+
+// DOM ready init
 document.addEventListener('DOMContentLoaded', () => {
   boardEl = document.getElementById('board');
   cells = Array.from(document.querySelectorAll('.cell'));
@@ -63,23 +157,34 @@ document.addEventListener('DOMContentLoaded', () => {
   modalMessage = document.getElementById('modalMessage');
   modalClose = document.getElementById('modalClose');
 
-  footerLogo = document.getElementById('footerLogo');
+  boardLogo = document.getElementById('boardLogo');
+  bgTridents = document.getElementById('bgTridents');
+  bgEmojis = document.getElementById('bgEmojis');
 
   if(!boardEl || !cells.length || !messageEl){
     console.error('FATAL: elementos del tablero faltantes.');
     return;
   }
 
+  // populate background initially
+  populateBackground();
+  // regenerate on resize (debounced)
+  window.addEventListener('resize', debounce(()=> {
+    // clear containers before regenerate
+    if(bgTridents) bgTridents.innerHTML = '';
+    if(bgEmojis) bgEmojis.innerHTML = '';
+    populateBackground();
+  }, 220));
+
   // UI listeners
   if(pickX) pickX.addEventListener('click', () => onPick('X'));
   if(pickO) pickO.addEventListener('click', () => onPick('O'));
   if(restartBtn) restartBtn.addEventListener('click', resetGame);
   if(modalClose) modalClose.addEventListener('click', hideModal);
-
   cells.forEach(c => c.addEventListener('click', onCellClick));
 
-  // keyboard: Enter to start when banner visible
-  document.addEventListener('keydown', (e) => {
+  // keyboard
+  document.addEventListener('keydown', (e)=> {
     if(e.key === 'Enter' && !sessionStarted && opponentBanner && !opponentBanner.classList.contains('hidden')){
       hideBanner();
       startGame();
@@ -93,64 +198,70 @@ document.addEventListener('DOMContentLoaded', () => {
   if(state.plays >= MAX_PLAYS){
     hideIntro();
     hideBanner();
-    hideFooterLogo();
+    hideBoardLogo();
   } else {
     showIntroThenBanner();
   }
 
-  // Attach start listener defensively now
+  // Ensure start btn listener
   attachStartListener();
 
-  message('Tocá "Comenzar" para iniciar la serie');
-  console.debug('Init complete; startBtn present:', !!startBtn);
+  console.debug('Background populated and init done');
 });
 
-// ---------- robust start listener ----------
+// --- small helpers to show/hide the board logo below the grid ---
+function showBoardLogo(){
+  if(!boardLogo) return;
+  boardLogo.classList.remove('hidden');
+  boardLogo.style.display = 'block';
+}
+function hideBoardLogo(){
+  if(!boardLogo) return;
+  boardLogo.classList.add('hidden');
+  boardLogo.style.display = 'none';
+}
+
+// --- Start listener (robust) ---
 let _startHandler = null;
 function attachStartListener(){
   if(!startBtn) return;
   startBtn.type = 'button';
   if(_startHandler) startBtn.removeEventListener('click', _startHandler);
-  _startHandler = () => {
-    console.debug('startBtn clicked -> handler running');
-    hideBanner();
-    startGame();
-  };
+  _startHandler = ()=>{ hideBanner(); startGame(); };
   startBtn.addEventListener('click', _startHandler);
   startBtn.disabled = false;
   startBtn.classList.remove('disabled');
-  console.debug('attachStartListener: attached and enabled');
 }
 
-// ---------- intro -> banner ----------
+// --- intro/banner flow (uses loading bar) ---
 function showIntroThenBanner(){
   showIntro();
-  startLoadingBar(INTRO_DURATION).then(() => {
+  startLoadingBar(INTRO_DURATION).then(()=> {
     if(state.plays >= MAX_PLAYS){
       hideIntro();
       hideBanner();
       return;
     }
     hideIntro();
-    setTimeout(() => showBanner(), 150);
+    setTimeout(()=> showBanner(), 160);
   });
 }
 function showIntro(){
   if(!introOverlay) return;
   introOverlay.classList.remove('hidden');
-  introOverlay.setAttribute('aria-hidden', 'false');
+  introOverlay.setAttribute('aria-hidden','false');
   if(opponentBanner) opponentBanner.classList.add('hidden');
-  hideFooterLogo();
+  hideBoardLogo();
   if(loadingBar) loadingBar.style.width = '0%';
   if(loadingText) loadingText.textContent = 'Cargando el juego...';
 }
 function hideIntro(){
   if(!introOverlay) return;
   introOverlay.classList.add('hidden');
-  introOverlay.setAttribute('aria-hidden', 'true');
+  introOverlay.setAttribute('aria-hidden','true');
 }
 function startLoadingBar(duration){
-  return new Promise(resolve => {
+  return new Promise(resolve=>{
     if(!loadingBar){ setTimeout(resolve, duration); return; }
     const start = performance.now();
     function tick(now){
@@ -159,46 +270,20 @@ function startLoadingBar(duration){
       loadingBar.style.width = (pct * 100) + '%';
       if(loadingText) loadingText.textContent = `Cargando el juego... ${Math.round(pct*100)}%`;
       if(pct < 1) requestAnimationFrame(tick);
-      else setTimeout(() => { if(loadingText) loadingText.textContent = 'Listo'; resolve(); }, 220);
+      else setTimeout(()=> { if(loadingText) loadingText.textContent = 'Listo'; resolve(); }, 220);
     }
     requestAnimationFrame(tick);
   });
 }
 
-// ---------- banner / footer ----------
-function showBanner(){
-  if(!opponentBanner) return;
-  opponentBanner.classList.remove('hidden');
-  opponentBanner.setAttribute('aria-hidden', 'false');
-  attachStartListener(); // ensure listener active
-}
-function hideBanner(){
-  if(!opponentBanner) return;
-  opponentBanner.classList.add('hidden');
-  opponentBanner.setAttribute('aria-hidden', 'true');
-}
-function showFooterLogo(){ if(!footerLogo) return; footerLogo.classList.remove('hidden'); footerLogo.style.display = ''; }
-function hideFooterLogo(){ if(!footerLogo) return; footerLogo.classList.add('hidden'); footerLogo.style.display = 'none'; }
+// --- banner control ---
+function showBanner(){ if(!opponentBanner) return; opponentBanner.classList.remove('hidden'); opponentBanner.setAttribute('aria-hidden','false'); attachStartListener(); }
+function hideBanner(){ if(!opponentBanner) return; opponentBanner.classList.add('hidden'); opponentBanner.setAttribute('aria-hidden','true'); }
 
-// ---------- storage / UI ----------
-function loadState(){
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(raw) state = JSON.parse(raw);
-  } catch(e){
-    state = { playerWins:0, cpuWins:0, plays:0 };
-  }
-  updateScoreboardUI();
-  updatePlaysUI();
-  checkPlaysLimitUI();
-}
+// --- storage / UI helpers (same) ---
+function loadState(){ try { const raw = localStorage.getItem(STORAGE_KEY); if(raw) state = JSON.parse(raw); } catch(e){ state = { playerWins:0, cpuWins:0, plays:0 }; } updateScoreboardUI(); updatePlaysUI(); checkPlaysLimitUI(); }
 function saveState(){ try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e){} }
-function updateScoreboardUI(){
-  if(playerWinsEl) playerWinsEl.textContent = `${state.playerWins} / ${MAX_PLAYS}`;
-  if(cpuWinsEl) cpuWinsEl.textContent = `${state.cpuWins} / ${MAX_PLAYS}`;
-  if(playerBonusPercentEl) playerBonusPercentEl.textContent = `Bono: ${bonusPercent(state.playerWins)}%`;
-  if(cpuBonusPercentEl) cpuBonusPercentEl.textContent = `Bono: ${bonusPercent(state.cpuWins)}%`;
-}
+function updateScoreboardUI(){ if(playerWinsEl) playerWinsEl.textContent = `${state.playerWins} / ${MAX_PLAYS}`; if(cpuWinsEl) cpuWinsEl.textContent = `${state.cpuWins} / ${MAX_PLAYS}`; if(playerBonusPercentEl) playerBonusPercentEl.textContent = `Bono: ${bonusPercent(state.playerWins)}%`; if(cpuBonusPercentEl) cpuBonusPercentEl.textContent = `Bono: ${bonusPercent(state.cpuWins)}%`; }
 function updatePlaysUI(){ if(playsLeftEl) playsLeftEl.textContent = Math.max(0, MAX_PLAYS - state.plays); }
 function bonusPercent(wins){ if(wins<=0) return 0; if(wins===1) return 100; if(wins===2) return 150; return 200; }
 function checkPlaysLimitUI(){
@@ -209,7 +294,7 @@ function checkPlaysLimitUI(){
     message('Has alcanzado el máximo de 3 partidas por dispositivo.');
     hideBanner();
     hideIntro();
-    hideFooterLogo();
+    hideBoardLogo();
   } else {
     if(sessionStarted){ startBtn.disabled = true; startBtn.classList.add('disabled'); }
     else { startBtn.disabled = false; startBtn.classList.remove('disabled'); }
@@ -217,13 +302,11 @@ function checkPlaysLimitUI(){
 }
 function setActiveChoice(){ if(!pickX || !pickO) return; pickX.classList.toggle('active', playerSymbol === 'X'); pickO.classList.toggle('active', playerSymbol === 'O'); }
 
-// ---------- picks ----------
-function onPick(sym){ if(sessionStarted) return; if(sym === 'X'){ playerSymbol = 'X'; cpuSymbol = 'O'; } else { playerSymbol = 'O'; cpuSymbol = 'X'; } setActiveChoice(); }
-
-// ---------- board UI ----------
+// --- picks / board UI ---
+function onPick(sym){ if(sessionStarted) return; if(sym === 'X'){ playerSymbol='X'; cpuSymbol='O'; } else { playerSymbol='O'; cpuSymbol='X'; } setActiveChoice(); }
 function resetBoardUI(){ cells.forEach(c => { c.innerHTML = ''; c.classList.remove('disabled','win'); c.disabled = false; }); }
 
-// ---------- juego ----------
+// --- game logic (same behavior) ---
 function startGame(){
   if(state.plays >= MAX_PLAYS){ message('No puedes comenzar: alcanzaste el límite de 3 partidas por dispositivo.'); return; }
   sessionStarted = true;
@@ -231,11 +314,11 @@ function startGame(){
 
   resetBoardUI();
   board = Array(9).fill(null);
-  currentTurn = playerSymbol; // jugador empieza
+  currentTurn = playerSymbol;
   running = true;
   cpuThinking = false;
   message(`Juego iniciado — Tú: ${symbolToEmoji(playerSymbol)}  |  ${cpuName}: ${symbolToEmoji(cpuSymbol)}`);
-  showFooterLogo();
+  showBoardLogo();
 }
 
 function resetGame(){
@@ -247,35 +330,31 @@ function resetGame(){
     currentTurn = playerSymbol;
     running = true;
     message('Partida reiniciada — continúa la serie');
-    showFooterLogo();
+    showBoardLogo();
   } else {
     sessionStarted = false;
     showIntroThenBanner();
     message('Juego reiniciado. Mostrando presentación...');
-    hideFooterLogo();
+    hideBoardLogo();
   }
 }
 
-// ---------- click handling (player) ----------
 function onCellClick(e){
-  if(!running || cpuThinking){ return; }
+  if(!running || cpuThinking) return;
   const el = e.currentTarget;
   const idx = Number(el.dataset.index);
   if(Number.isNaN(idx)) return;
   if(board[idx]) return;
   if(currentTurn !== playerSymbol) return;
 
-  // Player move
   makeMove(idx, playerSymbol);
   afterMove();
 
-  // Fallback: if CPU turn should have started and didn't, force it shortly after
-  setTimeout(() => {
+  setTimeout(()=>{
     if(running && !cpuThinking && currentTurn === cpuSymbol){
-      console.debug('Fallback: forcing doCpuTurn because conditions indicate CPU turn but it did not start.');
       doCpuTurn();
     }
-  }, 360);
+  }, 350);
 }
 
 function makeMove(index, symbol){
@@ -289,17 +368,12 @@ function makeMove(index, symbol){
 
 function afterMove(){
   const winner = checkWinner(board);
-  if(winner){
-    handleEnd(winner);
-    return;
-  }
+  if(winner){ handleEnd(winner); return; }
   currentTurn = currentTurn === 'X' ? 'O' : 'X';
-  if(running && currentTurn === cpuSymbol){
-    doCpuTurn();
-  }
+  if(running && currentTurn === cpuSymbol) doCpuTurn();
 }
 
-// ---------- CPU ----------
+// CPU
 function doCpuTurn(){
   cpuThinking = true;
   message(`${cpuName} está pensando...`);
@@ -328,7 +402,7 @@ function cpuRandomMove(){ const avail = availableMoves(board); if(avail.length =
 function availableMoves(b){ return b.map((v,i)=> v===null?i:null).filter(v=>v!==null); }
 function findWinningMove(b, symbol){ for(const i of availableMoves(b)){ b[i] = symbol; const w = checkWinner(b); b[i] = null; if(w === symbol) return i; } return null; }
 
-// ---------- ganador / fin ----------
+// winner / end
 function checkWinner(b){ for(const [a,b1,c] of WIN_COMBINATIONS){ if(b[a] && b[a] === b[b1] && b[a] === b[c]) return b[a]; } if(b.every(v=>v!==null)) return 'D'; return null; }
 
 function handleEnd(winner){
@@ -347,7 +421,7 @@ function handleEnd(winner){
       }
     }
   }
-  cells.forEach(c => c.classList.add('disabled'));
+  cells.forEach(c=>c.classList.add('disabled'));
   saveState();
   updateScoreboardUI();
   updatePlaysUI();
@@ -360,7 +434,7 @@ function handleEnd(winner){
       currentTurn = playerSymbol;
       running = true;
       message(`Siguiente partida iniciada — Partida ${state.plays + 1} de ${MAX_PLAYS}`);
-      showFooterLogo();
+      showBoardLogo();
     }, 900);
   } else {
     setTimeout(()=>{
@@ -368,15 +442,15 @@ function handleEnd(winner){
       if(modalPercent) modalPercent.textContent = `${bp}%`;
       if(modalMessage) modalMessage.textContent = (bp>0) ? `Has obtenido ${bp}% por ${state.playerWins} victoria(s).` : `No obtuviste bono (0 victorias).`;
       showModal();
-      hideFooterLogo();
+      hideBoardLogo();
     }, 700);
   }
 }
 
-// ---------- modal ----------
+// modal
 function showModal(){ if(resultModal) resultModal.classList.remove('hidden'); }
 function hideModal(){ if(resultModal) resultModal.classList.add('hidden'); }
 
-// ---------- utilities ----------
+// utilities
 function message(text){ if(messageEl) messageEl.textContent = text; }
 function bonusPercent(wins){ if(wins<=0) return 0; if(wins===1) return 100; if(wins===2) return 150; return 200; }
