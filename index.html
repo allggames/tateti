@@ -76,8 +76,8 @@
   <!-- INTRO: presentación con logo2 (aparece antes de todo) -->
   <div id="introOverlay" class="intro-overlay" role="dialog" aria-modal="true" aria-label="Presentación">
     <div class="intro-card">
-      <!-- Asumir que el archivo subido se llama logo2.png y está en la misma carpeta -->
-      <img id="introLogo" src="logo2.png" alt="Logo presentación" />
+      <!-- Ahora las imágenes se cargan desde la carpeta images/ -->
+      <img id="introLogo" src="images/logo2.png" alt="Logo presentación" />
       <button id="introContinue" class="primary intro-continue">Continuar</button>
     </div>
   </div>
@@ -91,8 +91,7 @@
   </div>
 
   <!-- Logo fijo inferior (aparece cuando el tablero está visible) -->
-  <!-- Asumir que el archivo subido se llama logo.png y está en la misma carpeta -->
-  <img id="footerLogo" class="footer-logo hidden" src="logo.png" alt="Logo pie de página" aria-hidden="true">
+  <img id="footerLogo" class="footer-logo hidden" src="images/logo.png" alt="Logo pie de página" aria-hidden="true">
 
   <!-- Modal que muestra el bono final al completar las 3 partidas -->
   <div id="resultModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
