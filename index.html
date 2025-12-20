@@ -65,13 +65,26 @@
     <footer class="legend" aria-hidden="true"></footer>
   </main>
 
-  <!-- INTRO: presentación con logo2 (aparece primero). Se auto-oculta y luego salta al cartel NEXUS -->
+  <!-- INTRO: presentación con logo2 (aparece primero).
+       Muestra fondo naranja con muchos 🔱 pequeños y una barra de carga.
+       Al completar la carga, desaparece y aparece el cartel de NEXUS. -->
   <div id="introOverlay" class="intro-overlay" role="dialog" aria-modal="true" aria-label="Presentación">
     <div class="intro-card">
       <img id="introLogo" src="images/logo2.png" alt="Logo presentación" />
+      <div class="loading-bar-outer" aria-hidden="true">
+        <div id="loadingBar" class="loading-bar"></div>
+      </div>
+      <div class="loading-text" id="loadingText" aria-hidden="true">Cargando el juego...</div>
     </div>
-    <!-- contenedor para partículas decorativas en el intro (opcional) -->
-    <div id="introParticles" class="intro-particles" aria-hidden="true"></div>
+
+    <!-- pequeñas tridentes distribuidas en el fondo de la intro -->
+    <div class="trident-bg" aria-hidden="true">
+      <!-- 16 tridents (posiciones controladas por CSS) -->
+      <span>🔱</span><span>🔱</span><span>🔱</span><span>🔱</span>
+      <span>🔱</span><span>🔱</span><span>🔱</span><span>🔱</span>
+      <span>🔱</span><span>🔱</span><span>🔱</span><span>🔱</span>
+      <span>🔱</span><span>🔱</span><span>🔱</span><span>🔱</span>
+    </div>
   </div>
 
   <!-- Cartel central (overlay) con NEXUS + botón Comenzar (se muestra tras Intro) -->
