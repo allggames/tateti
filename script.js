@@ -19,12 +19,36 @@ const difficulty = document.getElementById('difficulty');
 const startBtn = document.getElementById('startBtn');
 const restartBtn = document.getElementById('restartBtn');
 
+const playerBonusesEl = document.getElementById('playerBonuses');
+const cpuBonusesEl = document.getElementById('cpuBonuses');
+
 let board = Array(9).fill(null);
 let playerSymbol = 'X';
 let cpuSymbol = 'O';
 let currentTurn = 'X';
 let running = false;
 let cpuThinking = false;
+
+// Bonos (persisten en localStorage)
+const STORAGE_KEY = 'tatetiBonos';
+let bonuses = { player: 0, cpu: 0 };
+
+function loadBonuses(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) bonuses = JSON.parse(raw);
+  } catch(e){ bonuses = { player:0, cpu:0 }; }
+  updateBonusesUI();
+}
+
+function saveBonuses(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(bonuses)); } catch(e){}
+}
+
+function updateBonusesUI(){
+  playerBonusesEl.textContent = bonuses.player;
+  cpuBonusesEl.textContent = bonuses.cpu;
+}
 
 function setActiveChoice() {
   pickX.classList.toggle('active', playerSymbol === 'X');
@@ -52,6 +76,7 @@ cells.forEach(c => c.addEventListener('click', onCellClick));
 function startGame(){
   resetBoardUI();
   board = Array(9).fill(null);
+  // Dificultad por defecto ya está configurada en el HTML como 'easy'
   currentTurn = whoStarts.value === 'player' ? playerSymbol : cpuSymbol;
   running = true;
   message(`Juego iniciado — Tú: ${playerSymbol}  |  CPU: ${cpuSymbol}`);
@@ -168,11 +193,11 @@ function findWinningMove(b, symbol){
 
 function checkWinner(b){
   for(const [a,b1,c] of WIN_COMBINATIONS){
-    if(board[a] && board[a] === board[b1] && board[a] === board[c]){
-      return board[a];
+    if(b[a] && b[a] === b[b1] && b[a] === b[c]){
+      return b[a];
     }
   }
-  if(board.every(v=>v!==null)) return 'D'; // draw
+  if(b.every(v=>v!==null)) return 'D'; // draw
   return null;
 }
 
@@ -180,9 +205,18 @@ function endGame(winner){
   running = false;
   // resaltar línea ganadora si no es empate
   if(winner === 'D'){
-    message('Empate 🙃');
+    message('Empate 🙃 — sin bono');
   } else {
-    message(winner === playerSymbol ? '¡Ganaste! 🎉' : 'CPU gana 😢');
+    if(winner === playerSymbol){
+      message('¡Ganaste! 🎉 Has recibido 1 bono');
+      bonuses.player += 1;
+    } else {
+      message('CPU gana 😢 — CPU recibe 1 bono');
+      bonuses.cpu += 1;
+    }
+    saveBonuses();
+    updateBonusesUI();
+
     // resaltar combos ganadoras
     for(const [a,b,c] of WIN_COMBINATIONS){
       if(board[a] && board[a] === board[b] && board[a] === board[c]){
@@ -254,6 +288,9 @@ document.addEventListener('keydown', (e)=>{
 
 // Ajustar símbolos si el usuario cambia antes de iniciar
 setActiveChoice();
+
+// Cargar y mostrar bonos guardados
+loadBonuses();
 
 // Al cargar, desactivar células hasta empezar
 resetBoardUI();
