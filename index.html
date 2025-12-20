@@ -18,10 +18,6 @@
       </div>
 
       <div class="control-row">
-        <div class="difficulty-note">Dificultad: intermedia (ajustada para ser un poco más fácil)</div>
-      </div>
-
-      <div class="control-row">
         <button id="startBtn" class="primary">Comenzar</button>
         <button id="restartBtn">Reiniciar</button>
       </div>
@@ -60,9 +56,20 @@
     </section>
 
     <footer class="legend">
-      <p>Hecho con ❤️ — CPU en dificultad intermedia (ligeramente más fácil). Texto en español.</p>
+      <p>Hecho con ❤️ — CPU en dificultad interna (no visible). Texto en español.</p>
     </footer>
   </main>
+
+  <!-- Modal que muestra el bono final al completar las 3 partidas -->
+  <div id="resultModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-content">
+      <h2 id="modalTitle">Resultado final</h2>
+      <p id="modalMessage"></p>
+      <div class="modal-actions">
+        <button id="modalClose" class="primary">Cerrar</button>
+      </div>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>
