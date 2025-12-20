@@ -1,6 +1,6 @@
 // Tatetí - Jugador vs NEXUS (CPU)
-// Muy fácil: blockProb reducido a 0.30 y heurProb a 0.05.
-// Start incluido dentro del cartel/banner con NEXUS.
+// Overlay cartel en el centro con "HOY JUGARÁS CONTRA NEXUS🤖" + botón Comenzar.
+// Al tocar Comenzar, el cartel desaparece y comienza la serie (auto-inicio de partidas).
 
 // Config
 const cpuName = 'NEXUS';
@@ -46,7 +46,7 @@ let sessionStarted = false;
 // Estado persistente
 let state = { playerWins: 0, cpuWins: 0, plays: 0 };
 
-// --- inicializar UI ---
+// inicializar texto del banner
 opponentBanner.querySelector('.opponent-text').textContent = `HOY JUGARÁS CONTRA ${cpuName}🤖`;
 
 // --- storage ---
@@ -92,9 +92,12 @@ function bonusPercent(wins){
 
 function checkPlaysLimitUI(){
   if(state.plays >= MAX_PLAYS){
+    // Si ya jugaste las 3 partidas no permitimos volver a iniciar
     startBtn.disabled = true;
     startBtn.classList.add('disabled');
     message('Has alcanzado el máximo de 3 partidas por dispositivo.');
+    // ocultar el banner si queda visible
+    hideBanner();
   } else {
     if(sessionStarted){
       startBtn.disabled = true;
@@ -102,6 +105,7 @@ function checkPlaysLimitUI(){
     } else {
       startBtn.disabled = false;
       startBtn.classList.remove('disabled');
+      showBanner(); // mostrar banner si aún no se inició la serie
     }
   }
 }
@@ -120,11 +124,30 @@ pickO.addEventListener('click', ()=> {
   setActiveChoice();
 });
 
-startBtn.addEventListener('click', startGame);
+startBtn.addEventListener('click', () => {
+  // Al presionar, ocultar el cartel y comenzar la serie
+  hideBanner();
+  startGame();
+});
 restartBtn.addEventListener('click', resetGame);
 
 cells.forEach(c => c.addEventListener('click', onCellClick));
 modalClose.addEventListener('click', hideModal);
+
+// --- banner show/hide ---
+function hideBanner(){
+  if(!opponentBanner) return;
+  opponentBanner.classList.add('hidden');
+}
+function showBanner(){
+  if(!opponentBanner) return;
+  // solo mostrar si no se inició la sesión y no se superó el limite
+  if(!sessionStarted && state.plays < MAX_PLAYS){
+    opponentBanner.classList.remove('hidden');
+  } else {
+    opponentBanner.classList.add('hidden');
+  }
+}
 
 // --- juego ---
 function startGame(){
@@ -152,7 +175,9 @@ function resetGame(){
     running = true;
     message('Partida reiniciada — continúa la serie');
   } else {
-    message('Juego reiniciado. Presioná "Comenzar" para jugar');
+    sessionStarted = false;
+    showBanner();
+    message('Juego reiniciado. Tocá "Comenzar" para empezar la serie');
   }
 }
 
@@ -205,11 +230,10 @@ function doCpuTurn(){
   }, 420);
 }
 
-// CPU MUY FÁCIL (oculto):
-// - Bloquea al jugador con probabilidad blockProb (0.30 por defecto).
-// - Heurística muy rara (heurProb = 0.05). Resto aleatorio.
+// CPU MUY FÁCIL (oculto)
+// blockProb reducido para facilitar ganar a NEXUS
 function cpuVeryEasyMove(){
-  const blockProb = 0.30; // más bajo para facilitar ganar a NEXUS
+  const blockProb = 0.30; // puede ajustarse aún más abajo si querés
   const heurProb = 0.05;
 
   const block = findWinningMove(board, playerSymbol);
@@ -304,13 +328,11 @@ function handleEnd(winner){
   } else {
     setTimeout(()=>{
       const bp = bonusPercent(state.playerWins);
-      const modalPercentEl = document.getElementById('modalPercent');
-      modalPercentEl.textContent = `${bp}%`;
-      const modalMsg = document.getElementById('modalMessage');
+      modalPercent.textContent = `${bp}%`;
       if(bp > 0){
-        modalMsg.textContent = `Has obtenido ${bp}% por ${state.playerWins} victoria(s).`;
+        modalMessage.textContent = `Has obtenido ${bp}% por ${state.playerWins} victoria(s).`;
       } else {
-        modalMsg.textContent = `No obtuviste bono (0 victorias).`;
+        modalMessage.textContent = `No obtuviste bono (0 victorias).`;
       }
       showModal();
     }, 700);
@@ -328,6 +350,7 @@ function hideModal(){
 // Teclas
 document.addEventListener('keydown', (e)=>{
   if(e.key === 'Enter' && !sessionStarted){
+    hideBanner();
     startGame();
   }
 });
@@ -341,4 +364,5 @@ function message(text){
 setActiveChoice();
 loadState();
 resetBoardUI();
-message('Presioná "Comenzar" para jugar');
+showBanner();
+message('Tocá "Comenzar" para iniciar la serie');
