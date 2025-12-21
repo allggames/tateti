@@ -139,8 +139,8 @@ body{
 /* Intro particles container */
 #introParticles{ position:absolute; inset:0; z-index:2195; pointer-events:none; }
 
-/* Backend background items styling (subtle) */
-.bg-item.trident{ opacity: 0.06; filter: blur(.2px); mix-blend-mode: normal; color: rgba(255,255,255,0.06); }
+/* Background items styling (subtle) */
+.bg-item.trident{ opacity: 0.06; filter: blur(.22px); mix-blend-mode: normal; color: rgba(255,255,255,0.06); }
 .bg-item.emoji{ opacity: 0.045; filter: blur(.25px); }
 
 /* Banner (shown after intro completes) */
@@ -149,9 +149,7 @@ body{
 .overlay-card{ background: linear-gradient(180deg, rgba(210,95,18,0.98), rgba(180,70,18,0.98)); color:#fff; border-radius:12px; padding:20px; width:min(520px,92%); box-shadow: 0 22px 56px rgba(0,0,0,0.36); border: 1px solid rgba(255,255,255,0.06); text-align:center; }
 .banner-start{ min-width:160px; padding:10px 18px; font-weight:800; background:#fff; color: var(--bg-end); border-radius:10px; border:none; cursor:pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
 
-/* Result modal (right side) */
-/* Patch: modal centrado, texto centrado y fondo menos opaco (detalles del fondo visibles) */
-
+/* Modal centered and subtle background so details remain visible */
 .modal{
   position: fixed;
   inset: 0;
@@ -159,26 +157,18 @@ body{
   align-items: center;
   justify-content: center;
   z-index: 2400;
-  /* fondo semi-transparente más claro para que no "mate" los detalles del fondo */
   background: rgba(2, 6, 23, 0.14);
   transition: opacity .18s ease, visibility .18s ease;
 }
+.modal.hidden{ display: none; opacity: 0; visibility: hidden; pointer-events: none; }
 
-/* oculto */
-.modal.hidden{
-  display: none;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-/* animación de entrada suave */
+/* Modal enter animation */
 @keyframes modalEnter {
   from { opacity: 0; transform: translateY(-6px) scale(.98); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* contenido: centrado y con ancho cómodo */
+/* Modal content */
 .modal-content{
   border-radius:12px;
   box-shadow: 0 22px 52px rgba(0,0,0,0.36);
@@ -189,27 +179,12 @@ body{
   min-width: 320px;
   max-width: 92%;
   width: min(420px, 88%);
-  text-align: center; /* <- centra todo el texto */
+  text-align: center;
   animation: modalEnter .22s ease both;
 }
-
-/* Ajustes tipográficos para enfatizar el porcentaje */
-.modal-percent{
-  margin: 10px 0 14px;
-  font-weight:900;
-  font-size:1.6rem;
-  line-height:1;
-}
-
-/* Botón centrado y con margen */
+.modal-percent{ margin: 10px 0 14px; font-weight:900; font-size:1.6rem; line-height:1; }
 .modal-actions{ display:flex; justify-content:center; margin-top:8px; }
 .modal-actions .primary{ padding:8px 14px; }
-
-/* Mantener los detalles del fondo visibles incluso en pantallas pequeñas */
-@media (max-width:900px){
-  .modal{ background: rgba(2,6,23,0.12); }
-  .modal-content{ width: min(560px, 92%); }
-}
 
 /* Buttons */
 .primary{ background: linear-gradient(180deg, var(--orange-bright), #f17321); color:#fff; border-radius:10px; padding:10px 14px; border:none; box-shadow: 0 10px 28px rgba(0,0,0,0.18); }
@@ -219,8 +194,8 @@ body{
   :root{ --cell-size: clamp(56px, 14vw, 96px); }
   .container{ max-width:96%; max-height: calc(100vh - 40px); padding:12px; }
   .loading-bar-outer{ width:86%; }
-  .modal{ right:12px; left:12px; top:auto; bottom:14px; transform:none; justify-content:center; }
-  .modal-content{ max-width: calc(100% - 48px); }
+  .modal{ background: rgba(2,6,23,0.12); }
+  .modal-content{ width: min(560px, 92%); max-width: calc(100% - 48px); }
 }
 @media (max-width:480px){
   :root{ --cell-size: clamp(50px, 22vw, 92px); }
@@ -229,49 +204,20 @@ body{
   .loading-text{ font-size:0.9rem; }
 }
 
-/* === Patch: tridentes "suspendidos" en la intro (suave movimiento) ===
-   Pegar al final de style.css */
-#introParticles .bg-item.trident{
-  /* más suave por defecto (se puede ajustar) */
-  color: rgba(255,255,255,0.06) !important;
-  opacity: 0.045 !important;
-  filter: blur(.25px) !important;
-  mix-blend-mode: normal !important;
-
-  /* animación de "flotar" */
-  animation-name: tatetiFloat;
-  animation-duration: var(--tateti-float-duration, 4s);
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
-  animation-direction: alternate;
-  will-change: transform, opacity;
-  transform-origin: center;
-}
-
-/* movimiento leve y orgánico */
-@keyframes tatetiFloat {
-  0%   { transform: translateY(0) rotate(-2deg); opacity: 0.042; }
-  50%  { transform: translateY(-8px) rotate(6deg); opacity: 0.055; }
-  100% { transform: translateY(0) rotate(-2deg); opacity: 0.042; }
-}
-
-/* ---- Tridentes flotando (aplica a introParticles y bgTridents) ---- */
-
+/* --- TRIDENTS: style and floating animation --- */
 #introParticles .bg-item.trident,
 #bgTridents .bg-item.trident {
   position: absolute;
   pointer-events: none;
   user-select: none;
 
-  /* color y suavizado (ajusta opacidad si querés más visibles) */
-  color: rgba(255,255,255,0.07) !important;
-  opacity: 0.05 !important;
-  filter: blur(.25px) !important;
+  color: rgba(255,255,255,0.08) !important;
+  opacity: 0.06 !important;
+  filter: blur(.22px) !important;
   mix-blend-mode: normal !important;
 
-  /* animación de "flotar" */
   animation-name: tatetiFloat;
-  animation-duration: var(--tateti-float-duration, 4.5s);
+  animation-duration: var(--tateti-float-duration, 5s);
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
   animation-direction: alternate;
@@ -279,15 +225,15 @@ body{
   transform-origin: center;
 }
 
-/* keyframes: leve translateY + rotación */
+/* Floating keyframes */
 @keyframes tatetiFloat {
-  0%   { transform: translateY(0) rotate(-3deg); opacity: 0.042; }
-  40%  { transform: translateY(-6px) rotate(3deg); opacity: 0.058; }
-  100% { transform: translateY(0) rotate(-3deg); opacity: 0.042; }
+  0%   { transform: translateY(0) rotate(-3deg); opacity: 0.045; }
+  50%  { transform: translateY(-8px) rotate(4deg); opacity: 0.06; }
+  100% { transform: translateY(0) rotate(-3deg); opacity: 0.045; }
 }
 
-/* si querés tridentes un poco más grandes en pantallas grandes */
+/* Slight adjustments for very wide screens */
 @media (min-width:1300px){
   #introParticles .bg-item.trident,
-  #bgTridents .bg-item.trident { filter: blur(.22px); }
+  #bgTridents .bg-item.trident { filter: blur(.2px); }
 }
