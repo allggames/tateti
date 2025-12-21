@@ -460,3 +460,16 @@ body{
   filter: none !important;
   text-shadow: 0 2px 6px rgba(0,0,0,0.28) !important;
 }
+
+/* Forzar tridentes visibles en mobile */
+@media (max-width: 480px){
+  #bgTridents { display: block !important; } /* muestra algunos del fondo */
+  #bgTridents .bg-item.trident,
+  #introParticles .bg-item.trident {
+    font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji", "Twemoji Mozilla", sans-serif !important;
+    opacity: 0.22 !important;
+    filter: none !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.18) !important;
+  }
+  #introParticles{ z-index: 2205 !important; } /* se asegura encima de fondos pero debajo de paneles si hace falta */
+}
