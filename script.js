@@ -347,3 +347,102 @@ function handleEnd(winner){
     setTimeout(()=>{ const bp = bonusPercent(state.playerWins); if(modalPercent) modalPercent.textContent = `${bp}%`; if(modalMessage) modalMessage.textContent = (bp>0) ? `Has obtenido ${bp}% por ${state.playerWins} victoria(s).` : `No obtuviste bono (0 victorias).`; if(resultModal) resultModal.classList.remove('hidden'); hideBoardLogo(); }, 700);
   }
 }
+
+/* --- Mobile / small-screen tweaks --- */
+@media (max-width: 900px) {
+  :root{
+    --container-vertical-margin: 28px;
+  }
+  .container{
+    padding:12px;
+    gap:8px;
+  }
+  .intro-card{ width: min(92%, 480px); padding:12px; }
+  .loading-bar-outer{ width:86%; height:10px; }
+  .loading-text{ font-size:0.92rem; }
+  .board{ padding:12px; gap: calc(var(--board-gap) * 0.8); }
+}
+
+/* Small phones */
+@media (max-width: 480px){
+  :root{
+    --cell-size: clamp(44px, 22vw, 72px);
+    --container-vertical-margin: 20px;
+  }
+
+  body { padding: 10px; }
+
+  .container{
+    max-width: 100%;
+    border-radius:10px;
+    padding:10px;
+  }
+
+  .intro-card{
+    width: 92%;
+    padding: 10px;
+    gap:8px;
+  }
+
+  .intro-card img#introLogo{ max-width: 46vw; }
+
+  .loading-bar-outer{
+    width: 88%;
+    height: 10px;
+  }
+  .loading-bar{ transition: width .14s linear; }
+  .loading-text{ font-size:0.88rem; font-weight:800; }
+
+  .board{
+    grid-template-columns: repeat(3, var(--cell-size));
+    grid-auto-rows: var(--cell-size);
+    gap: clamp(6px, 3.4vw, 10px);
+    padding:10px;
+    border-radius:10px;
+  }
+
+  .cell{
+    border-radius:10px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.18);
+    font-size: clamp(18px, 8vw, 32px);
+  }
+
+  .score-item strong{ font-size:0.78rem; }
+  .score-item span{ font-size:0.96rem; }
+
+  .banner-start{ padding:10px 14px; font-size:0.98rem; }
+
+  /* Tridents: fewer, smaller, less opacity on mobile */
+  #bgTridents{ display: none; } /* hide heavy background layer on phones to improve clarity */
+  #bgEmojis{ display: none; }
+
+  #introParticles{
+    z-index: 2195;
+    pointer-events: none;
+    opacity: 1; /* visible by default on mobile */
+  }
+  #introParticles .bg-item.trident{
+    opacity: 0.18 !important;
+    filter: none !important;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.18) !important;
+    font-size: 12px !important; /* base mobile size */
+    transition: transform .22s ease, opacity .22s ease !important;
+    will-change: transform, opacity;
+  }
+  #introParticles .bg-item.trident.small{ font-size:10px !important; opacity:0.14 !important; }
+  #introParticles .bg-item.trident.medium{ font-size:12px !important; opacity:0.18 !important; }
+  #introParticles .bg-item.trident.large{ font-size:14px !important; opacity:0.22 !important; }
+
+  /* Reduce animation intensity on mobile for battery/CPU */
+  @media (prefers-reduced-motion: reduce){
+    #introParticles .bg-item.trident { animation: none !important; transition: none !important; }
+  }
+}
+
+/* Very small devices (extra safe) */
+@media (max-width: 360px){
+  :root{ --cell-size: clamp(40px, 24vw, 64px); }
+  .intro-card img#introLogo{ max-width: 48vw; }
+  .loading-text{ font-size:0.82rem; }
+  #introParticles .bg-item.trident{ opacity:0.16 !important; }
+}
