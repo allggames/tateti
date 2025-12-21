@@ -228,3 +228,29 @@ body{
   .loading-bar-outer{ width:88%; height:10px; }
   .loading-text{ font-size:0.9rem; }
 }
+
+/* === Patch: tridentes "suspendidos" en la intro (suave movimiento) ===
+   Pegar al final de style.css */
+#introParticles .bg-item.trident{
+  /* más suave por defecto (se puede ajustar) */
+  color: rgba(255,255,255,0.06) !important;
+  opacity: 0.045 !important;
+  filter: blur(.25px) !important;
+  mix-blend-mode: normal !important;
+
+  /* animación de "flotar" */
+  animation-name: tatetiFloat;
+  animation-duration: var(--tateti-float-duration, 4s);
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  will-change: transform, opacity;
+  transform-origin: center;
+}
+
+/* movimiento leve y orgánico */
+@keyframes tatetiFloat {
+  0%   { transform: translateY(0) rotate(-2deg); opacity: 0.042; }
+  50%  { transform: translateY(-8px) rotate(6deg); opacity: 0.055; }
+  100% { transform: translateY(0) rotate(-2deg); opacity: 0.042; }
+}
