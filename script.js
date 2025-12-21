@@ -1,5 +1,6 @@
-// script.js (sólo JS — reemplazar el script actual por este)
-// Implementa el comportamiento pedido: intro+barra -> banner "HOY JUGARÁS CONTRA NEXUS" -> click "Comenzar" -> 3 partidas -> resultado final
+// script.js (versión final y consolidada)
+// Reemplaza tu script.js por este. Corrige problemas de creación/orden de tridentes,
+// anima la barra de carga de forma robusta y mantiene todo el flujo (intro -> banner -> 3 partidas -> resultado).
 
 const cpuName = 'NEXUS';
 const WIN_COMBINATIONS = [
@@ -34,7 +35,7 @@ function dbg(...a){ console.debug('[tateti]', ...a); }
 function symbolToEmoji(s){ return s === 'X' ? '❌' : (s === 'O' ? '⭕' : s); }
 function message(txt){ if(messageEl) messageEl.textContent = txt; }
 
-/* Background helpers */
+/* ----------------- Background layers ----------------- */
 function createBgLayer(id){
   let el = by(id);
   if(!el){
@@ -48,24 +49,28 @@ function createBgLayer(id){
   }
   return el;
 }
+
 function populateBackground(){
   bgTridents = createBgLayer('bgTridents');
   bgEmojis = createBgLayer('bgEmojis');
   bgTridents.innerHTML = '';
   bgEmojis.innerHTML = '';
+
   const W = Math.max(window.innerWidth, 800);
   const H = Math.max(window.innerHeight, 600);
 
-  function place(container, count, factory, minDist = 60){
+  const place = (container, count, factory, minDist = 60) => {
     const placed = [];
     const padding = 24;
     for(let i=0;i<count;i++){
-      let attempts=0, x,y,ok;
+      let attempts = 0, x, y, ok;
       do {
         x = Math.random() * (W - padding*2) + padding;
         y = Math.random() * (H - padding*2) + padding;
         ok = true;
-        for(const p of placed) if(Math.hypot(p.x-x,p.y-y) < minDist){ ok = false; break; }
+        for(const p of placed){
+          if(Math.hypot(p.x - x, p.y - y) < minDist){ ok = false; break; }
+        }
         attempts++;
       } while(!ok && attempts < 40);
       placed.push({x,y});
@@ -74,37 +79,42 @@ function populateBackground(){
       node.style.left = `${x}px`;
       node.style.top  = `${y}px`;
       node.style.pointerEvents = 'none';
+
+      // add slight randomness to animation
+      node.style.animationDelay = (Math.random()*1.8).toFixed(2) + 's';
+      node.style.animationDuration = (4 + Math.random()*4).toFixed(2) + 's';
+
       container.appendChild(node);
     }
-  }
+  };
 
+  // Tridents (subtle)
   const trCount = Math.round(Math.max(8, Math.min(22, (W*H)/180000)));
   place(bgTridents, trCount, () => {
-    const n = document.createElement('div');
-    n.className = 'bg-item trident';
-    n.textContent = '🔱';
-    n.style.fontSize = `${10 + Math.floor(Math.random()*18)}px`;
-    n.style.opacity = `${0.04 + Math.random()*0.06}`;
-    n.style.transform = `rotate(${(-12 + Math.random()*24).toFixed(1)}deg)`;
-    n.style.filter = 'blur(.2px)';
-    return n;
+    const el = document.createElement('div');
+    el.className = 'bg-item trident';
+    el.textContent = '🔱';
+    el.style.fontSize = `${10 + Math.floor(Math.random()*20)}px`;
+    el.style.opacity = (0.03 + Math.random()*0.06).toString();
+    el.style.transform = `rotate(${(-12 + Math.random()*24).toFixed(1)}deg)`;
+    return el;
   }, 60);
 
+  // Emojis (subtle)
   const emojis = ['⭕','❌','🎁','✨'];
   const emCount = Math.round(Math.max(10, Math.min(22, (W*H)/150000)));
   place(bgEmojis, emCount, () => {
-    const n = document.createElement('div');
-    n.className = 'bg-item emoji';
-    n.textContent = emojis[Math.floor(Math.random()*emojis.length)];
-    n.style.fontSize = `${14 + Math.floor(Math.random()*36)}px`;
-    n.style.opacity = `${0.03 + Math.random()*0.06}`;
-    n.style.transform = `rotate(${(-25 + Math.random()*50).toFixed(1)}deg)`;
-    n.style.filter = 'blur(.25px)';
-    return n;
+    const el = document.createElement('div');
+    el.className = 'bg-item emoji';
+    el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    el.style.fontSize = `${12 + Math.floor(Math.random()*28)}px`;
+    el.style.opacity = (0.02 + Math.random()*0.05).toString();
+    el.style.transform = `rotate(${(-25 + Math.random()*50).toFixed(1)}deg)`;
+    return el;
   }, 50);
 }
 
-/* Intro UI */
+/* ----------------- Intro particles & loading UI ----------------- */
 function ensureIntroUI(){
   introOverlay = introOverlay || by('introOverlay');
   if(!introOverlay) return false;
@@ -134,6 +144,7 @@ function ensureIntroUI(){
     outer.style.overflow = 'hidden';
     outer.style.marginTop = '12px';
     outer.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.04)';
+    outer.style.alignSelf = 'center';
 
     const inner = document.createElement('div');
     inner.id = 'loadingBar';
@@ -173,8 +184,9 @@ function ensureIntroUI(){
 }
 
 function populateIntroParticles(){
+  introOverlay = introOverlay || by('introOverlay');
   if(!introOverlay) return;
-  introParticles = by('introParticles');
+  introParticles = introParticles || by('introParticles');
   if(!introParticles){
     introParticles = document.createElement('div');
     introParticles.id = 'introParticles';
@@ -184,40 +196,40 @@ function populateIntroParticles(){
     introOverlay.appendChild(introParticles);
   }
   introParticles.innerHTML = '';
+
+  // Use overlay rect if possible, fallback to window
   const rect = introOverlay.getBoundingClientRect();
+  const W = Math.max(rect.width, window.innerWidth);
+  const H = Math.max(rect.height, window.innerHeight);
   const count = 12;
   for(let i=0;i<count;i++){
-    const size = 12 + Math.round(Math.random()*26);
-    const opacity = 0.03 + Math.random()*0.04; // más suave
-    const rot = (-20 + Math.random()*40).toFixed(1);
-    const px = Math.random() * rect.width;
-    const py = Math.random() * rect.height;
     const span = document.createElement('div');
     span.className = 'bg-item trident';
     span.textContent = '🔱';
     span.style.position = 'absolute';
-    span.style.left = `${px}px`;
-    span.style.top = `${py}px`;
-    span.style.fontSize = `${size}px`;
-    span.style.opacity = `${opacity}`;
-    span.style.transform = `rotate(${rot}deg)`;
-    span.style.filter = 'blur(.25px)';
+    span.style.left = `${Math.random() * W}px`;
+    span.style.top  = `${Math.random() * H}px`;
+    span.style.fontSize = `${12 + Math.round(Math.random()*26)}px`;
+    span.style.opacity = (0.03 + Math.random()*0.06).toString();
+    span.style.transform = `rotate(${(-20 + Math.random()*40).toFixed(1)}deg)`;
+    span.style.filter = 'blur(.22px)';
 
-    // animación: duración y delay aleatorios para evitar sincronía
-    const dur = (3 + Math.random()*3).toFixed(2) + 's';      // 3s — 6s
-    const delay = (Math.random()*1.8).toFixed(2) + 's';      // 0s — 1.8s
-    span.style.animationDuration = dur;
-    span.style.animationDelay = delay;
+    // staggered timings so they don't move in sync
+    span.style.animationDuration = (3 + Math.random()*5).toFixed(2) + 's';
+    span.style.animationDelay = (Math.random()*1.8).toFixed(2) + 's';
 
     introParticles.appendChild(span);
   }
 }
 
-/* Robust anim */
+/* ---------- Robust loading animation (setInterval) ---------- */
 function animateLoading(duration){
   return new Promise((resolve)=>{
-    if(!ensureIntroUI()){ setTimeout(resolve, duration); return; }
-    const steps = Math.max(10, Math.round(duration / 80));
+    if(!ensureIntroUI()){
+      setTimeout(resolve, duration);
+      return;
+    }
+    const steps = Math.max(12, Math.round(duration / 60));
     let i = 0;
     if(loadingBar) loadingBar.style.width = '0%';
     if(loadingText) loadingText.textContent = 'Cargando el juego... 0%';
@@ -229,13 +241,13 @@ function animateLoading(duration){
       if(pct >= 100){
         clearInterval(interval);
         if(loadingText) loadingText.textContent = 'Listo';
-        setTimeout(resolve, 220);
+        setTimeout(resolve, 240);
       }
     }, Math.max(40, Math.floor(duration / steps)));
   });
 }
 
-/* Banner control */
+/* ---------- Banner control ---------- */
 function attachStartListener(){
   startBtn = startBtn || by('startBtn');
   if(!startBtn) return;
@@ -249,24 +261,32 @@ function attachStartListener(){
 function showBanner(){ const b = by('opponentBanner'); if(!b) return; b.classList.remove('hidden'); b.setAttribute('aria-hidden','false'); }
 function hideBanner(){ const b = by('opponentBanner'); if(!b) return; b.classList.add('hidden'); b.setAttribute('aria-hidden','true'); }
 
-/* Flow */
+/* ---------- Flow ---------- */
 async function showIntroThenProceed(){
   introOverlay = introOverlay || by('introOverlay');
   introCard = introCard || (introOverlay && introOverlay.querySelector('.intro-card'));
-  if(!introOverlay){ attachStartListener(); showBanner(); return; }
+  if(!introOverlay){
+    attachStartListener(); showBanner(); return;
+  }
+
   introOverlay.classList.remove('hidden');
   introOverlay.setAttribute('aria-hidden','false');
-  populateBackground();
-  populateIntroParticles();
+
+  // populate visuals
+  try { populateBackground(); } catch(e){ dbg('populateBackground error', e); }
+  try { populateIntroParticles(); } catch(e){ dbg('populateIntroParticles error', e); }
+
   try { await animateLoading(INTRO_DURATION); } catch(e){ console.error('animateLoading', e); }
+
   introOverlay.classList.add('hidden');
   introOverlay.setAttribute('aria-hidden','true');
+
   attachStartListener();
   showBanner();
   dbg('Intro finished; banner shown');
 }
 
-/* Init */
+/* ---------- Init ---------- */
 document.addEventListener('DOMContentLoaded', async ()=>{
   boardEl = by('board'); cells = Array.from(document.querySelectorAll('.cell')); messageEl = by('message');
   introOverlay = by('introOverlay'); introCard = introOverlay ? introOverlay.querySelector('.intro-card') : null;
@@ -275,7 +295,10 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   resultModal = by('resultModal'); modalPercent = by('modalPercent'); modalMessage = by('modalMessage'); modalClose = by('modalClose');
   boardLogo = by('boardLogo');
 
-  if(!boardEl || !cells.length || !messageEl){ console.error('FATAL: missing elements'); return; }
+  if(!boardEl || !cells.length || !messageEl){
+    console.error('FATAL: elementos faltantes');
+    return;
+  }
 
   if(modalClose) modalClose.addEventListener('click', ()=>{ if(resultModal) resultModal.classList.add('hidden'); });
   cells.forEach(c => c.addEventListener('click', onCellClick));
@@ -283,6 +306,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
   setActiveChoice(); loadState(); resetBoardUI();
 
+  // ensure overlays initial state
   if(introOverlay) introOverlay.classList.add('hidden');
   if(opponentBanner) opponentBanner.classList.add('hidden');
   if(resultModal) resultModal.classList.add('hidden');
@@ -300,18 +324,23 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   dbg('Init complete');
 });
 
-/* Game logic */
+/* ---------- Game logic ---------- */
 function showBoardLogo(){ if(!boardLogo) return; boardLogo.classList.remove('hidden'); boardLogo.style.display='block'; }
 function hideBoardLogo(){ if(!boardLogo) return; boardLogo.classList.add('hidden'); boardLogo.style.display='none'; }
+
 function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw) state = JSON.parse(raw); }catch(e){ state={playerWins:0,cpuWins:0,plays:0}; } updateScoreboardUI(); updatePlaysUI(); checkPlaysLimitUI(); }
 function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
 function updateScoreboardUI(){ if(playerWinsEl) playerWinsEl.textContent = `${state.playerWins} / ${MAX_PLAYS}`; if(cpuWinsEl) cpuWinsEl.textContent = `${state.cpuWins} / ${MAX_PLAYS}`; if(playerBonusPercentEl) playerBonusPercentEl.textContent = `Bono: ${bonusPercent(state.playerWins)}%`; if(cpuBonusPercentEl) cpuBonusPercentEl.textContent = `Bono: ${bonusPercent(state.cpuWins)}%`; }
 function updatePlaysUI(){ if(playsLeftEl) playsLeftEl.textContent = Math.max(0, MAX_PLAYS - state.plays); }
 function bonusPercent(w){ if(w<=0) return 0; if(w===1) return 100; if(w===2) return 150; return 200; }
+
 function checkPlaysLimitUI(){ if(!startBtn) return; if(state.plays >= MAX_PLAYS){ startBtn.disabled=true; startBtn.classList.add('disabled'); message('Has alcanzado el máximo de 3 partidas.'); hideBanner(); if(introOverlay) introOverlay.classList.add('hidden'); hideBoardLogo(); } else { if(sessionStarted){ startBtn.disabled=true; startBtn.classList.add('disabled'); } else { startBtn.disabled=false; startBtn.classList.remove('disabled'); } } }
+
 function setActiveChoice(){ /* no-op; X fixed */ }
 function resetBoardUI(){ cells.forEach(c=>{ c.innerHTML=''; c.classList.remove('disabled','win'); c.disabled=false; }); }
+
 function startGame(){ if(state.plays >= MAX_PLAYS){ message('No puedes comenzar: alcanzaste el límite.'); return; } sessionStarted=true; checkPlaysLimitUI(); resetBoardUI(); board=Array(9).fill(null); currentTurn=playerSymbol; running=true; cpuThinking=false; message(`Juego iniciado — Tú: ${symbolToEmoji(playerSymbol)}  |  ${cpuName}: ${symbolToEmoji(cpuSymbol)}`); showBoardLogo(); }
+
 function onCellClick(e){ if(!running || cpuThinking) return; const idx = Number(e.currentTarget.dataset.index); if(Number.isNaN(idx)) return; if(board[idx]) return; if(currentTurn !== playerSymbol) return; makeMove(idx, playerSymbol); afterMove(); setTimeout(()=>{ if(running && !cpuThinking && currentTurn===cpuSymbol) doCpuTurn(); }, 420); }
 function makeMove(i,s){ board[i]=s; const c=cells[i]; if(c){ c.innerHTML=`<span>${symbolToEmoji(s)}</span>`; c.classList.add('disabled'); } }
 function afterMove(){ const w = checkWinner(board); if(w){ handleEnd(w); return; } currentTurn = currentTurn==='X'?'O':'X'; if(running && currentTurn===cpuSymbol) doCpuTurn(); }
@@ -356,5 +385,3 @@ function handleEnd(winner){
 
 function showModal(){ if(resultModal) resultModal.classList.remove('hidden'); }
 function hideModal(){ if(resultModal) resultModal.classList.add('hidden'); }
-function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
-function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw) state = JSON.parse(raw); }catch(e){ state={playerWins:0,cpuWins:0,plays:0}; } updateScoreboardUI(); updatePlaysUI(); }
