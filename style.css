@@ -460,3 +460,35 @@ body{
   filter: none !important;
   text-shadow: 0 2px 6px rgba(0,0,0,0.28) !important;
 }
+/* === FIX: forzar visibilidad de emojis de fondo en móvil ===
+   Pegar AL FINAL de style.css (o reemplazar la sección mobile existente).
+*/
+@media (max-width: 480px) {
+  /* Aseguramos que el layer exista y sea visible */
+  #bgEmojis {
+    display: block !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
+    opacity: 1 !important;
+  }
+
+  /* Estilos legibles y resistentes para cada emoji */
+  #bgEmojis .bg-item.emoji {
+    display: inline-block !important;
+    font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Twemoji Mozilla",sans-serif !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+    color: rgba(255,255,255,0.98) !important;
+    opacity: 0.18 !important;               /* visible pero sutil */
+    filter: none !important;                /* quitar blur si existía */
+    text-shadow: 0 1px 2px rgba(0,0,0,0.18) !important;
+    mix-blend-mode: normal !important;
+    transform-origin: center !important;
+    pointer-events: none !important;
+    user-select: none !important;
+  }
+
+  /* Si quieres que los tridentes de fondo también se muestren */
+  #bgTridents { display: block !important; pointer-events: none !important; z-index: 0 !important; }
+  #bgTridents .bg-item.trident { opacity: 0.12 !important; filter: none !important; }
+}
