@@ -291,3 +291,51 @@ body{
 @media (min-width:1300px){
   #introParticles .bg-item.trident{ opacity:0.12; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.28)) blur(.10px); }
 }
+
+
+/* --- FIX PERMANENTE: tridentes (intro) visibles y con movimiento suave --- */
+#introParticles {
+  position: absolute;
+  inset: 0;
+  z-index: 2195;
+  pointer-events: none;
+  opacity: 1; /* aseguramos visibilidad (JS controla .visible si querés fade) */
+  transition: opacity .28s ease;
+}
+
+/* base - más visibles, sin blur excesivo */
+#introParticles .bg-item.trident {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  color: rgba(255, 255, 255, 0.98) !important;
+  opacity: 0.28 !important;               /* más visible que antes */
+  filter: none !important;               /* quitamos blur para que se noten */
+  mix-blend-mode: normal !important;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.28) !important;
+  will-change: transform, opacity;
+  transform-origin: center;
+  transition: transform .28s ease, opacity .28s ease !important;
+  z-index: 2215 !important;              /* por encima del fondo pero debajo del card */
+}
+
+/* tamaños (forzados si el JS usa clases) */
+#introParticles .bg-item.trident.small  { font-size: 12px !important; }
+#introParticles .bg-item.trident.medium { font-size: 16px !important; }
+#introParticles .bg-item.trident.large  { font-size: 22px !important; }
+
+/* animación: si el JS añade duración/delay inline, esto será la keyframe usada */
+@keyframes tridentIntroFloat {
+  0%   { transform: translate3d(0,0,0) rotate(-6deg); opacity: 0.22; }
+  40%  { transform: translate3d(6px,-8px,0) rotate(3deg);  opacity: 0.34; }
+  80%  { transform: translate3d(-6px,-12px,0) rotate(6deg); opacity: 0.28; }
+  100% { transform: translate3d(0,0,0) rotate(-6deg); opacity: 0.22; }
+}
+
+/* aplicamos la animación por defecto (JS puede sobreescribir duración/delay) */
+#introParticles .bg-item.trident {
+  animation-name: tridentIntroFloat;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
