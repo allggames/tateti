@@ -437,3 +437,26 @@ body{
   .loading-text{ font-size:0.82rem; }
   #introParticles .bg-item.trident{ opacity:0.16 !important; }
 }
+
+/* --- TRIDENTS: aumentar visibilidad permanente --- */
+#introParticles .bg-item.trident,
+#bgTridents .bg-item.trident {
+  color: rgba(255,255,255,0.98) !important;
+  opacity: 0.34 !important;               /* mayor visibilidad */
+  filter: none !important;                /* quitar blur si existía */
+  text-shadow: 0 3px 10px rgba(0,0,0,0.36) !important;
+  mix-blend-mode: normal !important;
+  transition: transform .28s ease, opacity .28s ease !important;
+}
+
+/* tamaños más visibles */
+#introParticles .bg-item.trident.small  { font-size: 13px !important; }
+#introParticles .bg-item.trident.medium { font-size: 18px !important; }
+#introParticles .bg-item.trident.large  { font-size: 24px !important; }
+
+/* emojis de fondo (si querés también reforzarlos) */
+#bgEmojis .bg-item.emoji {
+  opacity: 0.12 !important;
+  filter: none !important;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.28) !important;
+}
