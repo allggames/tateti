@@ -413,7 +413,7 @@ body{
     opacity: 1; /* visible by default on mobile */
   }
   #introParticles .bg-item.trident{
-    opacity: 0.18 !important;
+    opacity: 0.40 !important;
     filter: none !important;
     text-shadow: 0 1px 0 rgba(0,0,0,0.18) !important;
     font-size: 12px !important; /* base mobile size */
