@@ -237,3 +237,57 @@ body{
   #introParticles .bg-item.trident,
   #bgTridents .bg-item.trident { filter: blur(.2px); }
 }
+
+/* Intro tridents: tamaño, sombra, fade-in y animación flotante */
+#introParticles{
+  position:absolute;
+  inset:0;
+  z-index:2195; /* debajo del contenido de la card (2210), pero encima del fondo */
+  pointer-events:none;
+  opacity:0;
+  transition: opacity .28s ease;
+}
+
+/* cuando el overlay esté visible, el script añadirá .visible a #introParticles */
+#introParticles.visible{
+  opacity:1;
+}
+
+/* estilo base de cada tridente */
+#introParticles .bg-item.trident{
+  position:absolute;
+  pointer-events:none;
+  user-select:none;
+  color: rgba(255,255,255,0.95);
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.28)) blur(.12px);
+  mix-blend-mode: normal;
+  will-change: transform, opacity;
+  transform-origin: center;
+  opacity: 0.10; /* base atenuada */
+}
+
+/* clases por tamaño (asignadas por JS) */
+#introParticles .bg-item.trident.small{ font-size:12px; }
+#introParticles .bg-item.trident.medium{ font-size:16px; }
+#introParticles .bg-item.trident.large{ font-size:22px; }
+
+/* animación compuesta: float vertical + drift horizontal + ligera rotación */
+@keyframes tridentIntroFloat {
+  0%   { transform: translate3d(0,0,0) rotate(-6deg) scale(1); opacity: .08; }
+  30%  { transform: translate3d(6px,-6px,0) rotate(2deg)  scale(.98); opacity: .12; }
+  60%  { transform: translate3d(-6px,-12px,0) rotate(6deg) scale(1.02); opacity: .10; }
+  100% { transform: translate3d(0,0,0) rotate(-6deg) scale(1); opacity: .08; }
+}
+
+/* la animación se aplica; duración y delay los setea el JS inline para variar cada pieza */
+#introParticles .bg-item.trident{
+  animation-name: tridentIntroFloat;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+/* responsive tweaks */
+@media (min-width:1300px){
+  #introParticles .bg-item.trident{ opacity:0.12; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.28)) blur(.10px); }
+}
