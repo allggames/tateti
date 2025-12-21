@@ -1,5 +1,4 @@
-// script.js (corregido — preserva la barra de carga y añade tridentes en intro)
-// Reemplaza tu script.js por este archivo y luego Ctrl+F5.
+// script.js — versión final y estable: tridentes visibles en móvil y loading bar preservada
 
 const cpuName = 'NEXUS';
 const WIN_COMBINATIONS = [
@@ -20,7 +19,7 @@ let cpuThinking = false;
 let sessionStarted = false;
 let state = { playerWins:0, cpuWins:0, plays:0 };
 
-// DOM refs (populated on DOMContentLoaded)
+// DOM refs
 let boardEl, cells, messageEl;
 let introOverlay, introCard, introParticles;
 let loadingBar, loadingText;
@@ -34,7 +33,7 @@ function dbg(...a){ console.debug('[tateti]', ...a); }
 function symbolToEmoji(s){ return s === 'X' ? '❌' : (s === 'O' ? '⭕' : s); }
 function message(txt){ if(messageEl) messageEl.textContent = txt; }
 
-/* ----------------- Background helper ----------------- */
+/* Background helper - ensures container exists */
 function createBgLayer(id){
   let el = by(id);
   if(!el){
@@ -49,27 +48,18 @@ function createBgLayer(id){
   return el;
 }
 
-/* ---------- Populate global background (tridents + emojis) ---------- */
-// Reemplazar la función populateBackground por esta versión
+/* Populate global background (tridents + emojis) */
 function populateBackground(){
   bgTridents = createBgLayer('bgTridents');
   bgEmojis = createBgLayer('bgEmojis');
 
-  // aseguramos visibilidad del contenedor de emojis (sobrescribe CSS, incluso !important)
-  if(bgEmojis){
-    bgEmojis.style.setProperty('display', 'block', 'important');
-    bgEmojis.style.pointerEvents = 'none';
-    bgEmojis.style.zIndex = '0';
-  }
-
-  // limpiamos contenido previo
   if(bgTridents) bgTridents.innerHTML = '';
   if(bgEmojis)  bgEmojis.innerHTML = '';
 
   const W = Math.max(window.innerWidth, 800);
   const H = Math.max(window.innerHeight, 600);
   const mobile = window.innerWidth <= 480;
-  const densityFactor = mobile ? 0.35 : 1; // menos elementos en móviles
+  const densityFactor = mobile ? 0.35 : 1;
 
   function place(container, count, factory, minDist = 60){
     if(!container) return;
@@ -88,12 +78,11 @@ function populateBackground(){
       placed.push({x,y});
       const node = factory();
 
-      // posicion
       node.style.position = 'absolute';
       node.style.left = `${x}px`;
       node.style.top  = `${y}px`;
 
-      // animacion (más corta en mobile)
+      // animation durations shorter on mobile
       const dur = mobile ? (2.6 + Math.random()*2).toFixed(2) + 's' : (4 + Math.random()*4).toFixed(2) + 's';
       node.style.animationName = 'tridentIntroFloat';
       node.style.animationDuration = dur;
@@ -106,17 +95,14 @@ function populateBackground(){
     }
   }
 
-  // TRIDENTS background (same as before, but reduced on mobile)
   const trCount = Math.round(Math.max(6, Math.min(30, (W*H)/250000)));
   place(bgTridents, trCount, () => {
     const el = document.createElement('div');
     el.className = 'bg-item trident';
     el.textContent = '🔱';
-    // inline visual defaults (subtle)
     el.style.fontSize = `${10 + Math.floor(Math.random()*20)}px`;
     el.style.opacity = (mobile ? (0.04 + Math.random()*0.12) : (0.03 + Math.random()*0.08)).toString();
     el.style.transform = `rotate(${(-12 + Math.random()*24).toFixed(1)}deg)`;
-    // make sure visible on mobile (no blur)
     if(mobile){
       el.style.setProperty('filter','none','important');
       el.style.setProperty('color','rgba(255,255,255,0.95)','important');
@@ -124,7 +110,6 @@ function populateBackground(){
     return el;
   }, 50);
 
-  // EMOJIS background (force visible on mobile: font-family, color, opacity)
   const emojis = ['⭕','❌','🎁','✨'];
   const emCount = Math.round(Math.max(6, Math.min(18, (W*H)/300000)));
   place(bgEmojis, emCount, () => {
@@ -132,11 +117,10 @@ function populateBackground(){
     el.className = 'bg-item emoji';
     el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
 
-    // size smaller on mobile for clarity
     const size = mobile ? (10 + Math.floor(Math.random()*10)) : (12 + Math.floor(Math.random()*26));
     el.style.fontSize = `${size}px`;
 
-    // Force emoji-friendly font stack and visible styling inline
+    // Inline styles to force visibility on mobile & across platforms
     el.style.setProperty('font-family', '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Twemoji Mozilla", sans-serif', 'important');
     el.style.setProperty('color', 'rgba(255,255,255,0.98)', 'important');
     el.style.setProperty('opacity', (mobile ? (0.10 + Math.random()*0.12) : (0.02 + Math.random()*0.05)).toFixed(2), 'important');
@@ -149,31 +133,7 @@ function populateBackground(){
   }, 40);
 }
 
-  const trCount = Math.round(Math.max(8, Math.min(30, (W*H)/250000)));
-  place(bgTridents, trCount, () => {
-    const el = document.createElement('div');
-    el.className = 'bg-item trident';
-    el.textContent = '🔱';
-    el.style.fontSize = `${10 + Math.floor(Math.random()*20)}px`;
-    el.style.opacity = (0.03 + Math.random()*0.08).toString();
-    el.style.transform = `rotate(${(-12 + Math.random()*24).toFixed(1)}deg)`;
-    return el;
-  }, 50);
-
-  const emojis = ['⭕','❌','🎁','✨'];
-  const emCount = Math.round(Math.max(8, Math.min(18, (W*H)/300000)));
-  place(bgEmojis, emCount, () => {
-    const el = document.createElement('div');
-    el.className = 'bg-item emoji';
-    el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
-    el.style.fontSize = `${12 + Math.floor(Math.random()*26)}px`;
-    el.style.opacity = (0.02 + Math.random()*0.05).toString();
-    el.style.transform = `rotate(${(-25 + Math.random()*50).toFixed(1)}deg)`;
-    return el;
-  }, 40);
-}
-
-/* ---------- Intro particles (only for the intro overlay) ---------- */
+/* Intro particles container (ensures exists) */
 function ensureIntroParticlesContainer(){
   introOverlay = introOverlay || by('introOverlay');
   if(!introOverlay) return false;
@@ -181,15 +141,17 @@ function ensureIntroParticlesContainer(){
   if(!introParticles){
     introParticles = document.createElement('div');
     introParticles.id = 'introParticles';
+    // Keep it below the loading bar (loading bar z-index ~2270)
     introParticles.style.position = 'absolute';
     introParticles.style.inset = '0';
-    introParticles.style.zIndex = '2195';
+    introParticles.style.zIndex = '2200';
     introParticles.style.pointerEvents = 'none';
     introOverlay.appendChild(introParticles);
   }
   return true;
 }
 
+/* Populate intro particles (tridents shown during intro) */
 function populateIntroParticles(){
   if(!ensureIntroParticlesContainer()) return;
   introParticles.innerHTML = '';
@@ -197,27 +159,37 @@ function populateIntroParticles(){
   const rect = introOverlay.getBoundingClientRect();
   const W = Math.max(rect.width, window.innerWidth);
   const H = Math.max(rect.height, window.innerHeight);
+  const mobile = window.innerWidth <= 480;
+  const count = Math.max(4, Math.round(Math.max(6, Math.min(16, (W*H)/280000)) * (mobile ? 0.45 : 1)));
 
-  const count = Math.round(Math.max(8, Math.min(18, (W*H)/280000)));
   for(let i=0;i<count;i++){
     const node = document.createElement('div');
     node.className = 'bg-item trident';
     node.textContent = '🔱';
     node.style.position = 'absolute';
-    node.style.left = `${Math.random() * Math.max(200, W)}px`;
-    node.style.top  = `${Math.random() * Math.max(200, H)}px`;
+    node.style.left = `${Math.random() * Math.max(150, W)}px`;
+    node.style.top  = `${Math.random() * Math.max(150, H)}px`;
 
     // size
     const r = Math.random();
-    node.style.fontSize = (r < 0.45 ? 12 : (r < 0.86 ? 16 : 22)) + 'px';
+    const size = mobile ? (r < 0.5 ? 10 : (r < 0.9 ? 12 : 14)) : (r < 0.45 ? 12 : (r < 0.86 ? 16 : 22));
+    node.style.fontSize = `${size}px`;
 
-    node.style.opacity = (0.06 + Math.random()*0.20).toString();
+    // Force visible styling inline
+    node.style.setProperty('color', 'rgba(255,255,255,0.98)', 'important');
+    node.style.setProperty('opacity', (mobile ? (0.18 + Math.random()*0.12) : (0.20 + Math.random()*0.20)).toFixed(2), 'important');
+    node.style.setProperty('filter', 'none', 'important');
+    node.style.setProperty('text-shadow', '0 2px 6px rgba(0,0,0,0.28)', 'important');
+    node.style.setProperty('mix-blend-mode', 'normal', 'important');
+    // place under loading bar (but above background)
+    node.style.zIndex = '2200';
+
     node.style.transform = `rotate(${(-12 + Math.random()*24).toFixed(1)}deg)`;
 
-    // inline animation uses CSS keyframes tridentIntroFloat (we include CSS snippet separately)
+    // inline animation
     node.style.animationName = 'tridentIntroFloat';
-    node.style.animationDuration = (3 + Math.random()*6).toFixed(2) + 's';
-    node.style.animationDelay = (Math.random()*1.6).toFixed(2) + 's';
+    node.style.animationDuration = (mobile ? (2.6 + Math.random()*2).toFixed(2) : (3 + Math.random()*5).toFixed(2)) + 's';
+    node.style.animationDelay = (Math.random()*1.2).toFixed(2) + 's';
     node.style.animationTimingFunction = 'ease-in-out';
     node.style.animationIterationCount = 'infinite';
     node.style.animationDirection = 'alternate';
@@ -225,26 +197,22 @@ function populateIntroParticles(){
     introParticles.appendChild(node);
   }
 
-  // add visible class for fade-in if CSS handles it
+  // fade-in class (CSS handles opacity)
   requestAnimationFrame(()=> {
     if(introParticles) introParticles.classList.add('visible');
   });
 }
 
-/* ---------- Loading animation (robust) ----------
-   IMPORTANT: this function ONLY updates existing loadingBar/loadingText
-   elements that should be present in the HTML. It will NOT create duplicates.
-*/
+/* Loading animation (updates existing elements only) */
 function animateLoading(duration){
   return new Promise(resolve=>{
-    // If loading elements missing, fallback to a simple timeout
+    // If loading elements missing, fallback to a timeout
     if(!loadingBar || !loadingText) {
       setTimeout(resolve, duration);
       return;
     }
 
     const start = performance.now();
-    // We'll use time-based progression ensuring predictable duration
     function step(now){
       const pct = Math.min(1, (now - start) / duration);
       const p = Math.round(pct * 100);
@@ -260,7 +228,7 @@ function animateLoading(duration){
   });
 }
 
-/* ---------- Banner control ---------- */
+/* Banner control */
 function attachStartListener(){
   startBtn = startBtn || by('startBtn');
   if(!startBtn) return;
@@ -274,25 +242,21 @@ function attachStartListener(){
 function showBanner(){ const b = by('opponentBanner'); if(!b) return; b.classList.remove('hidden'); b.setAttribute('aria-hidden','false'); }
 function hideBanner(){ const b = by('opponentBanner'); if(!b) return; b.classList.add('hidden'); b.setAttribute('aria-hidden','true'); }
 
-/* ---------- Flow ---------- */
+/* Flow */
 async function showIntroThenProceed(){
   introOverlay = introOverlay || by('introOverlay');
   if(!introOverlay){ attachStartListener(); showBanner(); return; }
 
-  // show overlay (assumes intro markup contains loadingBar/loadingText)
   introOverlay.classList.remove('hidden');
   introOverlay.setAttribute('aria-hidden','false');
 
-  // populate visuals (background MAY have been already created)
   try{ populateBackground(); }catch(e){ dbg('populateBackground err', e); }
   try{ populateIntroParticles(); }catch(e){ dbg('populateIntroParticles err', e); }
 
   try { await animateLoading(INTRO_DURATION); } catch(e){ console.error('animateLoading', e); }
 
-  // fade out particles (if present) and hide overlay
   if(introParticles){
     introParticles.classList.remove('visible');
-    // keep slight delay for fade
     setTimeout(()=>{ if(introParticles) introParticles.innerHTML = ''; }, 300);
   }
 
@@ -304,13 +268,13 @@ async function showIntroThenProceed(){
   dbg('Intro finished; banner shown');
 }
 
-/* ---------- Init ---------- */
+/* Init */
 document.addEventListener('DOMContentLoaded', async ()=>{
   // refs
   boardEl = by('board'); cells = Array.from(document.querySelectorAll('.cell')); messageEl = by('message');
 
   introOverlay = by('introOverlay'); introCard = introOverlay ? introOverlay.querySelector('.intro-card') : null;
-  introParticles = by('introParticles'); // may be null at this moment
+  introParticles = by('introParticles'); // may be null
 
   opponentBanner = by('opponentBanner'); startBtn = by('startBtn');
 
@@ -319,7 +283,7 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   resultModal = by('resultModal'); modalPercent = by('modalPercent'); modalMessage = by('modalMessage'); modalClose = by('modalClose');
   boardLogo = by('boardLogo');
 
-  // Very important: reference existing loading elements from DOM (do NOT recreate)
+  // Reference existing loading elements (important)
   loadingBar = by('loadingBar');
   loadingText = by('loadingText');
 
@@ -334,16 +298,15 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
   setActiveChoice(); loadState(); resetBoardUI();
 
-  // ensure overlays initial hidden state
+  // initial hidden states
   if(introOverlay) introOverlay.classList.add('hidden');
   if(opponentBanner) opponentBanner.classList.add('hidden');
   if(resultModal) resultModal.classList.add('hidden');
 
-  // prepare backgrounds/particles early so they exist when intro shows
+  // prepare backgrounds/particles early
   try{ populateBackground(); }catch(e){ dbg('populateBackground error', e); }
   try{ populateIntroParticles(); }catch(e){ dbg('populateIntroParticles error', e); }
 
-  // responsive: regenerate background on resize
   window.addEventListener('resize', ()=>{ try{ populateBackground(); }catch(e){} });
 
   if(state.plays >= MAX_PLAYS){
