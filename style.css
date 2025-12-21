@@ -1,5 +1,3 @@
-/* style.css — versión limpia y fija: tridentes visibles en móvil + barra intacta */
-
 :root{
   --bg-start: #FF9A3C;
   --bg-end:   #FF5E3A;
@@ -104,38 +102,120 @@ body{
   transition: transform .12s ease, box-shadow .12s ease;
   user-select:none;
 }
+.cell:hover{ transform: translateY(-4px); box-shadow: 0 18px 34px rgba(0,0,0,0.28); }
 .cell.disabled{ cursor:not-allowed; opacity:0.92; }
 .cell.win{ outline:3px solid rgba(255,255,255,0.06); box-shadow: 0 18px 36px rgba(255,140,0,0.12); }
 
-/* Board logo fixed under the board */
-.board-logo{ margin-top:10px; max-width:160px; width:auto; height:auto; opacity:0.98; z-index:11; filter: drop-shadow(0 8px 18px rgba(0,0,0,0.18)); }
+/* Board logo fixed under the board (not overlapping cells) */
+.board-logo{
+  margin-top:10px;
+  max-width:160px;
+  width:auto;
+  height:auto;
+  opacity:0.98;
+  z-index:11; /* keep under any modal but above container */
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,0.18));
+}
 .board-logo.hidden{ display:none; }
 
 /* Intro overlay (centered, above app) */
-.intro-overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background: linear-gradient(180deg, rgba(255,152,50,1), rgba(230,110,40,1)); z-index: 2250; }
+.intro-overlay{
+  position:fixed; inset:0; display:flex; align-items:center; justify-content:center;
+  background: linear-gradient(180deg, rgba(255,152,50,1), rgba(230,110,40,1));
+  z-index: 2200; /* ensure on top */
+}
 .intro-overlay.hidden{ display:none; pointer-events:none; }
-.intro-card{ width:min(520px, 44vw); padding:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; position:relative; z-index:2260; }
+.intro-card{
+  width:min(520px, 44vw); padding:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+  position:relative; z-index:2210;
+}
 .intro-card img#introLogo{ max-width: clamp(160px, 28vw, 420px); filter: drop-shadow(0 8px 18px rgba(0,0,0,0.22)); }
 
 /* Loading bar */
-.loading-bar-outer{ width:72%; max-width:560px; height:12px; background: rgba(0,0,0,0.12); border-radius:10px; overflow:hidden; margin-top:12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); align-self:center; z-index:2270; }
-.loading-bar{ height:100%; width:0%; background: linear-gradient(90deg, #ffd9b3, var(--orange-bright)); border-radius:8px; transition: width .12s linear; z-index:2271; }
-.loading-text{ margin-top:8px; color:#fff; font-weight:700; text-align:center; width:100%; align-self:center; z-index:2272; }
+.loading-bar-outer{ width:72%; max-width:560px; height:12px; background: rgba(0,0,0,0.12); border-radius:10px; overflow:hidden; margin-top:12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); align-self:center; z-index:2215; }
+.loading-bar{ height:100%; width:0%; background: linear-gradient(90deg, #ffd9b3, var(--orange-bright)); border-radius:8px; transition: width .12s linear; z-index:2216; }
+.loading-text{ margin-top:8px; color:#fff; font-weight:700; text-align:center; width:100%; align-self:center; z-index:2216; }
 
-/* Intro particles container (below intro-card but above background) */
-#introParticles{ position:absolute; inset:0; z-index:2200; pointer-events:none; opacity:0; transition: opacity .28s ease; }
-#introParticles.visible{ opacity:1; }
+/* Intro particles container */
+#introParticles{ position:absolute; inset:0; z-index:2195; pointer-events:none; }
 
-/* Default (subtle) background items */
+/* Background items styling (subtle) */
 .bg-item.trident{ opacity: 0.06; filter: blur(.22px); mix-blend-mode: normal; color: rgba(255,255,255,0.06); }
 .bg-item.emoji{ opacity: 0.045; filter: blur(.25px); }
 
-/* Floating animation (default) */
+/* Banner (shown after intro completes) */
+.overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background: rgba(2,6,23,0.35); z-index: 2300; }
+.overlay.hidden{ display:none; pointer-events:none; }
+.overlay-card{ background: linear-gradient(180deg, rgba(210,95,18,0.98), rgba(180,70,18,0.98)); color:#fff; border-radius:12px; padding:20px; width:min(520px,92%); box-shadow: 0 22px 56px rgba(0,0,0,0.36); border: 1px solid rgba(255,255,255,0.06); text-align:center; }
+.banner-start{ min-width:160px; padding:10px 18px; font-weight:800; background:#fff; color: var(--bg-end); border-radius:10px; border:none; cursor:pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+
+/* Modal centered and subtle background so details remain visible */
+.modal{
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2400;
+  background: rgba(2, 6, 23, 0.14);
+  transition: opacity .18s ease, visibility .18s ease;
+}
+.modal.hidden{ display: none; opacity: 0; visibility: hidden; pointer-events: none; }
+
+/* Modal enter animation */
+@keyframes modalEnter {
+  from { opacity: 0; transform: translateY(-6px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Modal content */
+.modal-content{
+  border-radius:12px;
+  box-shadow: 0 22px 52px rgba(0,0,0,0.36);
+  border:1px solid rgba(0,0,0,0.08);
+  padding:22px;
+  background: linear-gradient(180deg, rgba(140,50,10,0.98), rgba(110,40,8,0.98));
+  color: #fff;
+  min-width: 320px;
+  max-width: 92%;
+  width: min(420px, 88%);
+  text-align: center;
+  animation: modalEnter .22s ease both;
+}
+.modal-percent{ margin: 10px 0 14px; font-weight:900; font-size:1.6rem; line-height:1; }
+.modal-actions{ display:flex; justify-content:center; margin-top:8px; }
+.modal-actions .primary{ padding:8px 14px; }
+
+/* Buttons */
+.primary{ background: linear-gradient(180deg, var(--orange-bright), #f17321); color:#fff; border-radius:10px; padding:10px 14px; border:none; box-shadow: 0 10px 28px rgba(0,0,0,0.18); }
+
+/* Responsive adjustments */
+@media (max-width:900px){
+  :root{ --cell-size: clamp(56px, 14vw, 96px); }
+  .container{ max-width:96%; max-height: calc(100vh - 40px); padding:12px; }
+  .loading-bar-outer{ width:86%; }
+  .modal{ background: rgba(2,6,23,0.12); }
+  .modal-content{ width: min(560px, 92%); max-width: calc(100% - 48px); }
+}
+@media (max-width:480px){
+  :root{ --cell-size: clamp(50px, 22vw, 92px); }
+  .intro-card img#introLogo{ max-width:56vw; }
+  .loading-bar-outer{ width:88%; height:10px; }
+  .loading-text{ font-size:0.9rem; }
+}
+
+/* --- TRIDENTS: style and floating animation --- */
 #introParticles .bg-item.trident,
 #bgTridents .bg-item.trident {
   position: absolute;
   pointer-events: none;
   user-select: none;
+
+  color: rgba(255,255,255,0.08) !important;
+  opacity: 0.06 !important;
+  filter: blur(.22px) !important;
+  mix-blend-mode: normal !important;
+
   animation-name: tatetiFloat;
   animation-duration: var(--tateti-float-duration, 5s);
   animation-timing-function: ease-in-out;
@@ -145,14 +225,53 @@ body{
   transform-origin: center;
 }
 
-/* small float keyframes */
+/* Floating keyframes */
 @keyframes tatetiFloat {
   0%   { transform: translateY(0) rotate(-3deg); opacity: 0.045; }
   50%  { transform: translateY(-8px) rotate(4deg); opacity: 0.06; }
   100% { transform: translateY(0) rotate(-3deg); opacity: 0.045; }
 }
 
-/* tridentIntroFloat fallback (used by JS inline) */
+/* Slight adjustments for very wide screens */
+@media (min-width:1300px){
+  #introParticles .bg-item.trident,
+  #bgTridents .bg-item.trident { filter: blur(.2px); }
+}
+
+/* Intro tridents: tamaño, sombra, fade-in y animación flotante */
+#introParticles{
+  position:absolute;
+  inset:0;
+  z-index:2195; /* debajo del contenido de la card (2210), pero encima del fondo */
+  pointer-events:none;
+  opacity:0;
+  transition: opacity .28s ease;
+}
+
+/* cuando el overlay esté visible, el script añadirá .visible a #introParticles */
+#introParticles.visible{
+  opacity:1;
+}
+
+/* estilo base de cada tridente */
+#introParticles .bg-item.trident{
+  position:absolute;
+  pointer-events:none;
+  user-select:none;
+  color: rgba(255,255,255,0.95);
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.28)) blur(.12px);
+  mix-blend-mode: normal;
+  will-change: transform, opacity;
+  transform-origin: center;
+  opacity: 0.10; /* base atenuada */
+}
+
+/* clases por tamaño (asignadas por JS) */
+#introParticles .bg-item.trident.small{ font-size:12px; }
+#introParticles .bg-item.trident.medium{ font-size:16px; }
+#introParticles .bg-item.trident.large{ font-size:22px; }
+
+/* animación compuesta: float vertical + drift horizontal + ligera rotación */
 @keyframes tridentIntroFloat {
   0%   { transform: translate3d(0,0,0) rotate(-6deg) scale(1); opacity: .08; }
   30%  { transform: translate3d(6px,-6px,0) rotate(2deg)  scale(.98); opacity: .12; }
@@ -160,22 +279,75 @@ body{
   100% { transform: translate3d(0,0,0) rotate(-6deg) scale(1); opacity: .08; }
 }
 
-/* Intro-specific defaults (slightly stronger than global background) */
+/* la animación se aplica; duración y delay los setea el JS inline para variar cada pieza */
 #introParticles .bg-item.trident{
-  color: rgba(255,255,255,0.95);
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,0.28)) blur(.08px);
-  opacity: 0.12;
+  animation-name: tridentIntroFloat;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
 }
 
-/* size helper classes */
-#introParticles .bg-item.trident.small{ font-size:12px; }
-#introParticles .bg-item.trident.medium{ font-size:16px; }
-#introParticles .bg-item.trident.large{ font-size:22px; }
+/* responsive tweaks */
+@media (min-width:1300px){
+  #introParticles .bg-item.trident{ opacity:0.12; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.28)) blur(.10px); }
+}
 
-/* Responsive tweaks */
-@media (max-width:900px){
-  :root{ --cell-size: clamp(56px, 14vw, 96px); --container-vertical-margin: 28px; }
-  .container{ max-width:96%; max-height: calc(100vh - 40px); padding:12px; gap:8px; }
+
+/* --- FIX PERMANENTE: tridentes (intro) visibles y con movimiento suave --- */
+#introParticles {
+  position: absolute;
+  inset: 0;
+  z-index: 2195;
+  pointer-events: none;
+  opacity: 1; /* aseguramos visibilidad (JS controla .visible si querés fade) */
+  transition: opacity .28s ease;
+}
+
+/* base - más visibles, sin blur excesivo */
+#introParticles .bg-item.trident {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  color: rgba(255, 255, 255, 0.98) !important;
+  opacity: 0.28 !important;               /* más visible que antes */
+  filter: none !important;               /* quitamos blur para que se noten */
+  mix-blend-mode: normal !important;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.28) !important;
+  will-change: transform, opacity;
+  transform-origin: center;
+  transition: transform .28s ease, opacity .28s ease !important;
+  z-index: 2215 !important;              /* por encima del fondo pero debajo del card */
+}
+
+/* tamaños (forzados si el JS usa clases) */
+#introParticles .bg-item.trident.small  { font-size: 12px !important; }
+#introParticles .bg-item.trident.medium { font-size: 16px !important; }
+#introParticles .bg-item.trident.large  { font-size: 22px !important; }
+
+/* animación: si el JS añade duración/delay inline, esto será la keyframe usada */
+@keyframes tridentIntroFloat {
+  0%   { transform: translate3d(0,0,0) rotate(-6deg); opacity: 0.22; }
+  40%  { transform: translate3d(6px,-8px,0) rotate(3deg);  opacity: 0.34; }
+  80%  { transform: translate3d(-6px,-12px,0) rotate(6deg); opacity: 0.28; }
+  100% { transform: translate3d(0,0,0) rotate(-6deg); opacity: 0.22; }
+}
+
+/* aplicamos la animación por defecto (JS puede sobreescribir duración/delay) */
+#introParticles .bg-item.trident {
+  animation-name: tridentIntroFloat;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+/* --- Mobile / small-screen tweaks --- */
+@media (max-width: 900px) {
+  :root{
+    --container-vertical-margin: 28px;
+  }
+  .container{
+    padding:12px;
+    gap:8px;
+  }
   .intro-card{ width: min(92%, 480px); padding:12px; }
   .loading-bar-outer{ width:86%; height:10px; }
   .loading-text{ font-size:0.92rem; }
@@ -183,58 +355,108 @@ body{
 }
 
 /* Small phones */
-@media (max-width:480px){
-  :root{ --cell-size: clamp(44px, 22vw, 72px); --container-vertical-margin: 20px; }
+@media (max-width: 480px){
+  :root{
+    --cell-size: clamp(44px, 22vw, 72px);
+    --container-vertical-margin: 20px;
+  }
+
   body { padding: 10px; }
-  .container{ max-width: 100%; border-radius:10px; padding:10px; }
-  .intro-card{ width: 92%; padding: 10px; gap:8px; }
+
+  .container{
+    max-width: 100%;
+    border-radius:10px;
+    padding:10px;
+  }
+
+  .intro-card{
+    width: 92%;
+    padding: 10px;
+    gap:8px;
+  }
+
   .intro-card img#introLogo{ max-width: 46vw; }
-  .loading-bar-outer{ width: 88%; height: 10px; }
+
+  .loading-bar-outer{
+    width: 88%;
+    height: 10px;
+  }
   .loading-bar{ transition: width .14s linear; }
   .loading-text{ font-size:0.88rem; font-weight:800; }
-  .board{ grid-template-columns: repeat(3, var(--cell-size)); grid-auto-rows: var(--cell-size); gap: clamp(6px, 3.4vw, 10px); padding:10px; border-radius:10px; }
-  .cell{ border-radius:10px; box-shadow: 0 8px 16px rgba(0,0,0,0.18); font-size: clamp(18px, 8vw, 32px); }
+
+  .board{
+    grid-template-columns: repeat(3, var(--cell-size));
+    grid-auto-rows: var(--cell-size);
+    gap: clamp(6px, 3.4vw, 10px);
+    padding:10px;
+    border-radius:10px;
+  }
+
+  .cell{
+    border-radius:10px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.18);
+    font-size: clamp(18px, 8vw, 32px);
+  }
+
   .score-item strong{ font-size:0.78rem; }
   .score-item span{ font-size:0.96rem; }
+
   .banner-start{ padding:10px 14px; font-size:0.98rem; }
 
-  /* Background tridents & emojis on mobile: fewer, small and visible */
-  #bgTridents { display: block !important; }
-  #bgEmojis  { display: block !important; }
+  /* Tridents: fewer, smaller, less opacity on mobile */
+  #bgTridents{ display: none; } /* hide heavy background layer on phones to improve clarity */
+  #bgEmojis{ display: none; }
 
-  #bgTridents .bg-item.trident {
-    font-size: 10px !important;
-    opacity: 0.12 !important;
-    filter: none !important;
-    color: rgba(255,255,255,0.95) !important;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.18) !important;
+  #introParticles{
+    z-index: 2195;
+    pointer-events: none;
+    opacity: 1; /* visible by default on mobile */
   }
-
-  #bgEmojis .bg-item.emoji{
-    font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Twemoji Mozilla", sans-serif !important;
-    font-size: 10px !important;
-    opacity: 0.12 !important;
+  #introParticles .bg-item.trident{
+    opacity: 0.18 !important;
     filter: none !important;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.18) !important;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.18) !important;
+    font-size: 12px !important; /* base mobile size */
+    transition: transform .22s ease, opacity .22s ease !important;
+    will-change: transform, opacity;
   }
+  #introParticles .bg-item.trident.small{ font-size:10px !important; opacity:0.14 !important; }
+  #introParticles .bg-item.trident.medium{ font-size:12px !important; opacity:0.18 !important; }
+  #introParticles .bg-item.trident.large{ font-size:14px !important; opacity:0.22 !important; }
 
-  /* Intro particles on mobile slightly stronger but under the intro card */
-  #introParticles{ z-index: 2200 !important; opacity:1; }
-  #introParticles .bg-item.trident{ opacity:0.22 !important; font-size:12px !important; }
+  /* Reduce animation intensity on mobile for battery/CPU */
+  @media (prefers-reduced-motion: reduce){
+    #introParticles .bg-item.trident { animation: none !important; transition: none !important; }
+  }
 }
 
-/* Respect reduced motion */
-@media (prefers-reduced-motion: reduce){
-  #introParticles .bg-item.trident,
-  #bgTridents .bg-item.trident,
-  #bgEmojis .bg-item.emoji { animation: none !important; transition: none !important; }
+/* Very small devices (extra safe) */
+@media (max-width: 360px){
+  :root{ --cell-size: clamp(40px, 24vw, 64px); }
+  .intro-card img#introLogo{ max-width: 48vw; }
+  .loading-text{ font-size:0.82rem; }
+  #introParticles .bg-item.trident{ opacity:0.16 !important; }
 }
 
-/* Final visibility boost (tweak as needed) */
+/* --- TRIDENTS: aumentar visibilidad permanente --- */
 #introParticles .bg-item.trident,
 #bgTridents .bg-item.trident {
   color: rgba(255,255,255,0.98) !important;
-  opacity: 0.28 !important;
+  opacity: 0.34 !important;               /* mayor visibilidad */
+  filter: none !important;                /* quitar blur si existía */
+  text-shadow: 0 3px 10px rgba(0,0,0,0.36) !important;
+  mix-blend-mode: normal !important;
+  transition: transform .28s ease, opacity .28s ease !important;
+}
+
+/* tamaños más visibles */
+#introParticles .bg-item.trident.small  { font-size: 13px !important; }
+#introParticles .bg-item.trident.medium { font-size: 18px !important; }
+#introParticles .bg-item.trident.large  { font-size: 24px !important; }
+
+/* emojis de fondo (si querés también reforzarlos) */
+#bgEmojis .bg-item.emoji {
+  opacity: 0.12 !important;
   filter: none !important;
-  text-shadow: 0 3px 8px rgba(0,0,0,0.32) !important;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.28) !important;
 }
