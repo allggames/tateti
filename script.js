@@ -50,19 +50,33 @@ function createBgLayer(id){
 }
 
 /* ---------- Populate global background (tridents + emojis) ---------- */
+// Reemplazar la función populateBackground por esta versión
 function populateBackground(){
   bgTridents = createBgLayer('bgTridents');
   bgEmojis = createBgLayer('bgEmojis');
-  bgTridents.innerHTML = '';
-  bgEmojis.innerHTML = '';
+
+  // aseguramos visibilidad del contenedor de emojis (sobrescribe CSS, incluso !important)
+  if(bgEmojis){
+    bgEmojis.style.setProperty('display', 'block', 'important');
+    bgEmojis.style.pointerEvents = 'none';
+    bgEmojis.style.zIndex = '0';
+  }
+
+  // limpiamos contenido previo
+  if(bgTridents) bgTridents.innerHTML = '';
+  if(bgEmojis)  bgEmojis.innerHTML = '';
 
   const W = Math.max(window.innerWidth, 800);
   const H = Math.max(window.innerHeight, 600);
+  const mobile = window.innerWidth <= 480;
+  const densityFactor = mobile ? 0.35 : 1; // menos elementos en móviles
 
   function place(container, count, factory, minDist = 60){
+    if(!container) return;
     const placed = [];
-    const padding = 24;
-    for(let i=0;i<count;i++){
+    const padding = mobile ? 12 : 24;
+    const N = Math.max(3, Math.round(count * densityFactor));
+    for(let i=0;i<N;i++){
       let attempts = 0, x, y, ok;
       do {
         x = Math.random() * (W - padding*2) + padding;
@@ -73,16 +87,21 @@ function populateBackground(){
       } while(!ok && attempts < 40);
       placed.push({x,y});
       const node = factory();
+
+      // posicion
       node.style.position = 'absolute';
       node.style.left = `${x}px`;
-      node.style.top = `${y}px`;
-      // inline animation so it always animates even if CSS loads later
+      node.style.top  = `${y}px`;
+
+      // animacion (más corta en mobile)
+      const dur = mobile ? (2.6 + Math.random()*2).toFixed(2) + 's' : (4 + Math.random()*4).toFixed(2) + 's';
       node.style.animationName = 'tridentIntroFloat';
-      node.style.animationDuration = (4 + Math.random()*4).toFixed(2) + 's';
-      node.style.animationDelay = (Math.random()*1.8).toFixed(2) + 's';
+      node.style.animationDuration = dur;
+      node.style.animationDelay = (Math.random()*1.2).toFixed(2) + 's';
       node.style.animationTimingFunction = 'ease-in-out';
       node.style.animationIterationCount = 'infinite';
       node.style.animationDirection = 'alternate';
+
       container.appendChild(node);
     }
   }
