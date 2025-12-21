@@ -149,7 +149,7 @@ function populateIntroParticles(){
     const r = Math.random();
     node.style.fontSize = (r < 0.45 ? 12 : (r < 0.86 ? 16 : 22)) + 'px';
 
-    node.style.opacity = (0.06 + Math.random()*0.12).toString();
+    node.style.opacity = (0.06 + Math.random()*0.20).toString();
     node.style.transform = `rotate(${(-12 + Math.random()*24).toFixed(1)}deg)`;
 
     // inline animation uses CSS keyframes tridentIntroFloat (we include CSS snippet separately)
