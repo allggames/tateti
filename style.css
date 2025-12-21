@@ -212,7 +212,7 @@ body{
   user-select: none;
 
   color: rgba(255,255,255,0.08) !important;
-  opacity: 0.06 !important;
+  opacity: 0.12 !important;
   filter: blur(.22px) !important;
   mix-blend-mode: normal !important;
 
