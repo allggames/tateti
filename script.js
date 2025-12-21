@@ -1,4 +1,6 @@
-// script.js — versión final y estable: tridentes visibles en móvil y loading bar preservada
+// script.js — versión corregida (no rompe nada): mantiene la barra de carga,
+// hace visibles los emojis/tridentes en móvil y añade un fallback SVG para móviles.
+// Reemplaza TODO tu script.js por este archivo y recarga (Ctrl+F5).
 
 const cpuName = 'NEXUS';
 const WIN_COMBINATIONS = [
@@ -48,10 +50,17 @@ function createBgLayer(id){
   return el;
 }
 
-/* Populate global background (tridents + emojis) */
+/* ---------- Populate global background (tridents + emojis) ---------- */
 function populateBackground(){
   bgTridents = createBgLayer('bgTridents');
-  bgEmojis = createBgLayer('bgEmojis');
+  bgEmojis  = createBgLayer('bgEmojis');
+
+  // Force bgEmojis visible (override CSS mobile hide if present)
+  if(bgEmojis){
+    bgEmojis.style.setProperty('display','block','important');
+    bgEmojis.style.pointerEvents = 'none';
+    bgEmojis.style.zIndex = '0';
+  }
 
   if(bgTridents) bgTridents.innerHTML = '';
   if(bgEmojis)  bgEmojis.innerHTML = '';
@@ -76,15 +85,19 @@ function populateBackground(){
         attempts++;
       } while(!ok && attempts < 40);
       placed.push({x,y});
-      const node = factory();
 
-      node.style.position = 'absolute';
-      node.style.left = `${x}px`;
-      node.style.top  = `${y}px`;
+      const node = factory();
+      // factory might return null in edge cases
+      if(!node) continue;
+
+      // ensure position only if not already set by factory (images etc.)
+      node.style.position = node.style.position || 'absolute';
+      node.style.left = node.style.left || `${x}px`;
+      node.style.top  = node.style.top  || `${y}px`;
 
       // animation durations shorter on mobile
       const dur = mobile ? (2.6 + Math.random()*2).toFixed(2) + 's' : (4 + Math.random()*4).toFixed(2) + 's';
-      node.style.animationName = 'tridentIntroFloat';
+      node.style.animationName = node.style.animationName || 'tridentIntroFloat';
       node.style.animationDuration = dur;
       node.style.animationDelay = (Math.random()*1.2).toFixed(2) + 's';
       node.style.animationTimingFunction = 'ease-in-out';
@@ -95,6 +108,7 @@ function populateBackground(){
     }
   }
 
+  // Tridents background (reduced on mobile)
   const trCount = Math.round(Math.max(6, Math.min(30, (W*H)/250000)));
   place(bgTridents, trCount, () => {
     const el = document.createElement('div');
@@ -110,30 +124,55 @@ function populateBackground(){
     return el;
   }, 50);
 
+  // Emojis background: use SVG fallback on mobile to avoid platform/font issues
   const emojis = ['⭕','❌','🎁','✨'];
   const emCount = Math.round(Math.max(6, Math.min(18, (W*H)/300000)));
+
   place(bgEmojis, emCount, () => {
-    const el = document.createElement('div');
-    el.className = 'bg-item emoji';
-    el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 480;
+    // choose random symbol (for non-mobile) - for mobile we provide a neutral SVG icon (gift-like)
+    const ch = emojis[Math.floor(Math.random()*emojis.length)];
 
-    const size = mobile ? (10 + Math.floor(Math.random()*10)) : (12 + Math.floor(Math.random()*26));
-    el.style.fontSize = `${size}px`;
-
-    // Inline styles to force visibility on mobile & across platforms
-    el.style.setProperty('font-family', '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Twemoji Mozilla", sans-serif', 'important');
-    el.style.setProperty('color', 'rgba(255,255,255,0.98)', 'important');
-    el.style.setProperty('opacity', (mobile ? (0.10 + Math.random()*0.12) : (0.02 + Math.random()*0.05)).toFixed(2), 'important');
-    el.style.setProperty('filter', 'none', 'important');
-    el.style.setProperty('text-shadow', '0 1px 2px rgba(0,0,0,0.18)', 'important');
-    el.style.setProperty('mix-blend-mode', 'normal', 'important');
-    el.style.setProperty('z-index', mobile ? '2185' : '0', 'important');
-
-    return el;
+    if(isMobile){
+      // Lightweight SVG fallback (data URI) so it's always visible on mobile
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'>
+        <g fill='none' fill-rule='evenodd'>
+          <rect x='2' y='6' width='20' height='12' rx='3' fill='%23FFD9B3' stroke='%23F17321' stroke-width='0.8'/>
+          <path d='M6 8c1.2-2 4-2.5 6-1.6C14 6.5 16.3 6 18 8' stroke='%23F17321' stroke-width='0.8' fill='none' stroke-linecap='round'/>
+        </g>
+      </svg>`;
+      const img = document.createElement('img');
+      img.className = 'bg-item emoji';
+      img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+      img.style.width = `${10 + Math.floor(Math.random()*14)}px`;
+      img.style.height = 'auto';
+      img.style.opacity = (0.10 + Math.random()*0.16).toFixed(2);
+      img.style.transform = `rotate(${(-25 + Math.random()*50).toFixed(1)}deg)`;
+      img.style.pointerEvents = 'none';
+      img.style.userSelect = 'none';
+      img.style.setProperty('filter','none','important');
+      img.style.setProperty('z-index','0','important');
+      return img;
+    } else {
+      const el = document.createElement('div');
+      el.className = 'bg-item emoji';
+      el.textContent = ch;
+      const size = 12 + Math.floor(Math.random()*26);
+      el.style.fontSize = `${size}px`;
+      el.style.opacity = (0.02 + Math.random()*0.05).toString();
+      el.style.transform = `rotate(${(-25 + Math.random()*50).toFixed(1)}deg)`;
+      el.style.pointerEvents = 'none';
+      el.style.userSelect = 'none';
+      // make desktop emojis slightly visible but subtle
+      el.style.setProperty('font-family', '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Twemoji Mozilla", sans-serif', 'important');
+      el.style.setProperty('color', 'rgba(255,255,255,0.98)', 'important');
+      el.style.setProperty('filter', 'none', 'important');
+      return el;
+    }
   }, 40);
 }
 
-/* Intro particles container (ensures exists) */
+/* ---------- Intro particles (only for the intro overlay) ---------- */
 function ensureIntroParticlesContainer(){
   introOverlay = introOverlay || by('introOverlay');
   if(!introOverlay) return false;
@@ -141,17 +180,16 @@ function ensureIntroParticlesContainer(){
   if(!introParticles){
     introParticles = document.createElement('div');
     introParticles.id = 'introParticles';
-    // Keep it below the loading bar (loading bar z-index ~2270)
+    // Place introParticles below loading bar z-index (loading bar z-index is ~2215 in CSS)
     introParticles.style.position = 'absolute';
     introParticles.style.inset = '0';
-    introParticles.style.zIndex = '2200';
+    introParticles.style.zIndex = '2195';
     introParticles.style.pointerEvents = 'none';
     introOverlay.appendChild(introParticles);
   }
   return true;
 }
 
-/* Populate intro particles (tridents shown during intro) */
 function populateIntroParticles(){
   if(!ensureIntroParticlesContainer()) return;
   introParticles.innerHTML = '';
@@ -170,23 +208,19 @@ function populateIntroParticles(){
     node.style.left = `${Math.random() * Math.max(150, W)}px`;
     node.style.top  = `${Math.random() * Math.max(150, H)}px`;
 
-    // size
     const r = Math.random();
     const size = mobile ? (r < 0.5 ? 10 : (r < 0.9 ? 12 : 14)) : (r < 0.45 ? 12 : (r < 0.86 ? 16 : 22));
     node.style.fontSize = `${size}px`;
 
-    // Force visible styling inline
     node.style.setProperty('color', 'rgba(255,255,255,0.98)', 'important');
     node.style.setProperty('opacity', (mobile ? (0.18 + Math.random()*0.12) : (0.20 + Math.random()*0.20)).toFixed(2), 'important');
     node.style.setProperty('filter', 'none', 'important');
     node.style.setProperty('text-shadow', '0 2px 6px rgba(0,0,0,0.28)', 'important');
     node.style.setProperty('mix-blend-mode', 'normal', 'important');
-    // place under loading bar (but above background)
-    node.style.zIndex = '2200';
+    node.style.zIndex = '2195';
 
     node.style.transform = `rotate(${(-12 + Math.random()*24).toFixed(1)}deg)`;
 
-    // inline animation
     node.style.animationName = 'tridentIntroFloat';
     node.style.animationDuration = (mobile ? (2.6 + Math.random()*2).toFixed(2) : (3 + Math.random()*5).toFixed(2)) + 's';
     node.style.animationDelay = (Math.random()*1.2).toFixed(2) + 's';
@@ -197,16 +231,14 @@ function populateIntroParticles(){
     introParticles.appendChild(node);
   }
 
-  // fade-in class (CSS handles opacity)
   requestAnimationFrame(()=> {
     if(introParticles) introParticles.classList.add('visible');
   });
 }
 
-/* Loading animation (updates existing elements only) */
+/* ---------- Loading animation (robust) ---------- */
 function animateLoading(duration){
   return new Promise(resolve=>{
-    // If loading elements missing, fallback to a timeout
     if(!loadingBar || !loadingText) {
       setTimeout(resolve, duration);
       return;
@@ -228,7 +260,7 @@ function animateLoading(duration){
   });
 }
 
-/* Banner control */
+/* ---------- Banner control ---------- */
 function attachStartListener(){
   startBtn = startBtn || by('startBtn');
   if(!startBtn) return;
@@ -242,7 +274,7 @@ function attachStartListener(){
 function showBanner(){ const b = by('opponentBanner'); if(!b) return; b.classList.remove('hidden'); b.setAttribute('aria-hidden','false'); }
 function hideBanner(){ const b = by('opponentBanner'); if(!b) return; b.classList.add('hidden'); b.setAttribute('aria-hidden','true'); }
 
-/* Flow */
+/* ---------- Flow ---------- */
 async function showIntroThenProceed(){
   introOverlay = introOverlay || by('introOverlay');
   if(!introOverlay){ attachStartListener(); showBanner(); return; }
@@ -268,7 +300,7 @@ async function showIntroThenProceed(){
   dbg('Intro finished; banner shown');
 }
 
-/* Init */
+/* ---------- Init ---------- */
 document.addEventListener('DOMContentLoaded', async ()=>{
   // refs
   boardEl = by('board'); cells = Array.from(document.querySelectorAll('.cell')); messageEl = by('message');
