@@ -68,15 +68,13 @@ function populateBackground(){
   const W = Math.max(window.innerWidth, 800);
   const H = Math.max(window.innerHeight, 600);
   const mobile = window.innerWidth <= 480;
-
-  // Increase density: higher values = more items
-  const densityFactor = mobile ? 0.75 : 1.6; // was 0.35 / 1
+  const densityFactor = mobile ? 0.35 : 1;
 
   function place(container, count, factory, minDist = 60){
     if(!container) return;
     const placed = [];
-    const padding = mobile ? 8 : 24;
-    const N = Math.max(4, Math.round(count * densityFactor));
+    const padding = mobile ? 12 : 24;
+    const N = Math.max(3, Math.round(count * densityFactor));
     for(let i=0;i<N;i++){
       let attempts = 0, x, y, ok;
       do {
@@ -87,13 +85,18 @@ function populateBackground(){
         attempts++;
       } while(!ok && attempts < 40);
       placed.push({x,y});
+
       const node = factory();
+      // factory might return null in edge cases
       if(!node) continue;
+
+      // ensure position only if not already set by factory (images etc.)
       node.style.position = node.style.position || 'absolute';
       node.style.left = node.style.left || `${x}px`;
       node.style.top  = node.style.top  || `${y}px`;
 
-      const dur = mobile ? (2.2 + Math.random()*1.6).toFixed(2) + 's' : (3 + Math.random()*4).toFixed(2) + 's';
+      // animation durations shorter on mobile
+      const dur = mobile ? (2.6 + Math.random()*2).toFixed(2) + 's' : (4 + Math.random()*4).toFixed(2) + 's';
       node.style.animationName = node.style.animationName || 'tridentIntroFloat';
       node.style.animationDuration = dur;
       node.style.animationDelay = (Math.random()*1.2).toFixed(2) + 's';
@@ -105,69 +108,21 @@ function populateBackground(){
     }
   }
 
-  // Tridents (slightly more on desktop, more on mobile now)
-  const trCount = Math.round(Math.max(8, Math.min(40, (W*H)/200000)));
+  // Tridents background (reduced on mobile)
+  const trCount = Math.round(Math.max(6, Math.min(30, (W*H)/250000)));
   place(bgTridents, trCount, () => {
     const el = document.createElement('div');
     el.className = 'bg-item trident';
     el.textContent = '🔱';
-    el.style.fontSize = `${10 + Math.floor(Math.random()*24)}px`;
-    el.style.opacity = (mobile ? (0.06 + Math.random()*0.18) : (0.04 + Math.random()*0.10)).toString();
+    el.style.fontSize = `${10 + Math.floor(Math.random()*20)}px`;
+    el.style.opacity = (mobile ? (0.04 + Math.random()*0.12) : (0.03 + Math.random()*0.08)).toString();
     el.style.transform = `rotate(${(-12 + Math.random()*24).toFixed(1)}deg)`;
     if(mobile){
       el.style.setProperty('filter','none','important');
-      el.style.setProperty('color','rgba(255,255,255,0.98)','important');
+      el.style.setProperty('color','rgba(255,255,255,0.95)','important');
     }
     return el;
-  }, 40);
-
-  // Emojis: significantly increased count (emojiMultiplier)
-  const emojis = ['⭕','❌','🎁','✨'];
-  const baseEmCount = Math.round(Math.max(10, Math.min(40, (W*H)/180000)));
-  const emojiMultiplier = mobile ? 1.8 : 1.6; // increase on mobile even more
-  const emCount = Math.round(baseEmCount * emojiMultiplier);
-
-  place(bgEmojis, emCount, () => {
-    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 480;
-    const ch = emojis[Math.floor(Math.random()*emojis.length)];
-
-    if(isMobile){
-      // SVG fallback for robust rendering on mobile
-      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'>
-        <g fill='none' fill-rule='evenodd'>
-          <rect x='2' y='6' width='20' height='12' rx='3' fill='%23FFD9B3' stroke='%23F17321' stroke-width='0.8'/>
-          <path d='M6 8c1.2-2 4-2.5 6-1.6C14 6.5 16.3 6 18 8' stroke='%23F17321' stroke-width='0.8' fill='none' stroke-linecap='round'/>
-        </g>
-      </svg>`;
-      const img = document.createElement('img');
-      img.className = 'bg-item emoji';
-      img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-      img.style.width = `${12 + Math.floor(Math.random()*18)}px`;
-      img.style.height = 'auto';
-      img.style.opacity = (0.16 + Math.random()*0.26).toFixed(2);
-      img.style.transform = `rotate(${(-25 + Math.random()*50).toFixed(1)}deg)`;
-      img.style.pointerEvents = 'none';
-      img.style.userSelect = 'none';
-      img.style.setProperty('filter','none','important');
-      img.style.setProperty('z-index','0','important');
-      return img;
-    } else {
-      const el = document.createElement('div');
-      el.className = 'bg-item emoji';
-      el.textContent = ch;
-      const size = 14 + Math.floor(Math.random()*28);
-      el.style.fontSize = `${size}px`;
-      el.style.opacity = (0.12 + Math.random()*0.32).toString();
-      el.style.transform = `rotate(${(-25 + Math.random()*50).toFixed(1)}deg)`;
-      el.style.pointerEvents = 'none';
-      el.style.userSelect = 'none';
-      el.style.setProperty('font-family', '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Twemoji Mozilla", sans-serif', 'important');
-      el.style.setProperty('color', 'rgba(255,255,255,0.98)', 'important');
-      el.style.setProperty('filter', 'none', 'important');
-      return el;
-    }
-  }, 32);
-}
+  }, 50);
 
   // Emojis background: use SVG fallback on mobile to avoid platform/font issues
   const emojis = ['⭕','❌','🎁','✨'];
