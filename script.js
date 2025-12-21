@@ -50,7 +50,6 @@ function createBgLayer(id){
 }
 
 /* ---------- Populate global background (tridents + emojis) ---------- */
-// Reemplazar la función populateBackground por esta versión
 function populateBackground(){
   bgTridents = createBgLayer('bgTridents');
   bgEmojis = createBgLayer('bgEmojis');
