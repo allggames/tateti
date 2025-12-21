@@ -8,7 +8,7 @@
   --container-vertical-margin: 48px;
 }
 
-/* Base */
+/* ------------------ Base ------------------ */
 *{box-sizing:border-box;font-family:'Lexend', system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;}
 html,body{height:100%;margin:0;}
 body{
@@ -32,7 +32,7 @@ body{
 }
 .bg-item{ position:absolute; pointer-events:none; user-select:none; }
 
-/* App container (above background layers) */
+/* ---------------- App container ---------------- */
 .container{
   width:100%;
   max-width:var(--container-max-width);
@@ -137,84 +137,25 @@ body{
 .loading-text{ margin-top:8px; color:#fff; font-weight:700; text-align:center; width:100%; align-self:center; z-index:2216; }
 
 /* Intro particles container */
-#introParticles{ position:absolute; inset:0; z-index:2195; pointer-events:none; }
+#introParticles{ position:absolute; inset:0; z-index:2195; pointer-events:none; opacity:0; transition: opacity .28s ease; }
+#introParticles.visible{ opacity:1; }
 
-/* Background items styling (subtle) */
+/* ---------------- Background item defaults ---------------- */
+/* Keep defaults subtle; we'll override on mobile and for intro specifically */
 .bg-item.trident{ opacity: 0.06; filter: blur(.22px); mix-blend-mode: normal; color: rgba(255,255,255,0.06); }
 .bg-item.emoji{ opacity: 0.045; filter: blur(.25px); }
 
-/* Banner (shown after intro completes) */
-.overlay{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background: rgba(2,6,23,0.35); z-index: 2300; }
-.overlay.hidden{ display:none; pointer-events:none; }
-.overlay-card{ background: linear-gradient(180deg, rgba(210,95,18,0.98), rgba(180,70,18,0.98)); color:#fff; border-radius:12px; padding:20px; width:min(520px,92%); box-shadow: 0 22px 56px rgba(0,0,0,0.36); border: 1px solid rgba(255,255,255,0.06); text-align:center; }
-.banner-start{ min-width:160px; padding:10px 18px; font-weight:800; background:#fff; color: var(--bg-end); border-radius:10px; border:none; cursor:pointer; box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
-
-/* Modal centered and subtle background so details remain visible */
-.modal{
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2400;
-  background: rgba(2, 6, 23, 0.14);
-  transition: opacity .18s ease, visibility .18s ease;
-}
-.modal.hidden{ display: none; opacity: 0; visibility: hidden; pointer-events: none; }
-
-/* Modal enter animation */
-@keyframes modalEnter {
-  from { opacity: 0; transform: translateY(-6px) scale(.98); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* Modal content */
-.modal-content{
-  border-radius:12px;
-  box-shadow: 0 22px 52px rgba(0,0,0,0.36);
-  border:1px solid rgba(0,0,0,0.08);
-  padding:22px;
-  background: linear-gradient(180deg, rgba(140,50,10,0.98), rgba(110,40,8,0.98));
-  color: #fff;
-  min-width: 320px;
-  max-width: 92%;
-  width: min(420px, 88%);
-  text-align: center;
-  animation: modalEnter .22s ease both;
-}
-.modal-percent{ margin: 10px 0 14px; font-weight:900; font-size:1.6rem; line-height:1; }
-.modal-actions{ display:flex; justify-content:center; margin-top:8px; }
-.modal-actions .primary{ padding:8px 14px; }
-
-/* Buttons */
-.primary{ background: linear-gradient(180deg, var(--orange-bright), #f17321); color:#fff; border-radius:10px; padding:10px 14px; border:none; box-shadow: 0 10px 28px rgba(0,0,0,0.18); }
-
-/* Responsive adjustments */
-@media (max-width:900px){
-  :root{ --cell-size: clamp(56px, 14vw, 96px); }
-  .container{ max-width:96%; max-height: calc(100vh - 40px); padding:12px; }
-  .loading-bar-outer{ width:86%; }
-  .modal{ background: rgba(2,6,23,0.12); }
-  .modal-content{ width: min(560px, 92%); max-width: calc(100% - 48px); }
-}
-@media (max-width:480px){
-  :root{ --cell-size: clamp(50px, 22vw, 92px); }
-  .intro-card img#introLogo{ max-width:56vw; }
-  .loading-bar-outer{ width:88%; height:10px; }
-  .loading-text{ font-size:0.9rem; }
-}
-
-/* --- TRIDENTS: style and floating animation --- */
+/* ---------------- Floating animations ---------------- */
 #introParticles .bg-item.trident,
 #bgTridents .bg-item.trident {
   position: absolute;
   pointer-events: none;
   user-select: none;
 
-  color: rgba(255,255,255,0.08) !important;
-  opacity: 0.06 !important;
-  filter: blur(.22px) !important;
-  mix-blend-mode: normal !important;
+  color: rgba(255,255,255,0.08);
+  opacity: 0.06;
+  filter: blur(.22px);
+  mix-blend-mode: normal;
 
   animation-name: tatetiFloat;
   animation-duration: var(--tateti-float-duration, 5s);
@@ -238,149 +179,49 @@ body{
   #bgTridents .bg-item.trident { filter: blur(.2px); }
 }
 
-/* Intro tridents: tamaño, sombra, fade-in y animación flotante */
-#introParticles{
-  position:absolute;
-  inset:0;
-  z-index:2195; /* debajo del contenido de la card (2210), pero encima del fondo */
-  pointer-events:none;
-  opacity:0;
-  transition: opacity .28s ease;
-}
-
-/* cuando el overlay esté visible, el script añadirá .visible a #introParticles */
-#introParticles.visible{
-  opacity:1;
-}
-
-/* estilo base de cada tridente */
+/* ---------------- Intro-specific defaults (more visible than general background) ---------------- */
 #introParticles .bg-item.trident{
-  position:absolute;
-  pointer-events:none;
-  user-select:none;
+  /* base for intro tridents (JS will also set inline values) */
   color: rgba(255,255,255,0.95);
   filter: drop-shadow(0 2px 6px rgba(0,0,0,0.28)) blur(.12px);
   mix-blend-mode: normal;
   will-change: transform, opacity;
   transform-origin: center;
-  opacity: 0.10; /* base atenuada */
+  opacity: 0.10;
 }
 
-/* clases por tamaño (asignadas por JS) */
+/* size helper classes (may be assigned by JS) */
 #introParticles .bg-item.trident.small{ font-size:12px; }
 #introParticles .bg-item.trident.medium{ font-size:16px; }
 #introParticles .bg-item.trident.large{ font-size:22px; }
 
-/* animación compuesta: float vertical + drift horizontal + ligera rotación */
+/* tridentIntroFloat used by JS inline animations as fallback */
 @keyframes tridentIntroFloat {
   0%   { transform: translate3d(0,0,0) rotate(-6deg) scale(1); opacity: .08; }
   30%  { transform: translate3d(6px,-6px,0) rotate(2deg)  scale(.98); opacity: .12; }
   60%  { transform: translate3d(-6px,-12px,0) rotate(6deg) scale(1.02); opacity: .10; }
   100% { transform: translate3d(0,0,0) rotate(-6deg) scale(1); opacity: .08; }
 }
+#introParticles .bg-item.trident{ animation-name: tridentIntroFloat; animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-direction: alternate; }
 
-/* la animación se aplica; duración y delay los setea el JS inline para variar cada pieza */
-#introParticles .bg-item.trident{
-  animation-name: tridentIntroFloat;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
-  animation-direction: alternate;
-}
-
-/* responsive tweaks */
-@media (min-width:1300px){
-  #introParticles .bg-item.trident{ opacity:0.12; filter: drop-shadow(0 3px 8px rgba(0,0,0,0.28)) blur(.10px); }
-}
-
-
-/* --- FIX PERMANENTE: tridentes (intro) visibles y con movimiento suave --- */
-#introParticles {
-  position: absolute;
-  inset: 0;
-  z-index: 2195;
-  pointer-events: none;
-  opacity: 1; /* aseguramos visibilidad (JS controla .visible si querés fade) */
-  transition: opacity .28s ease;
-}
-
-/* base - más visibles, sin blur excesivo */
-#introParticles .bg-item.trident {
-  position: absolute;
-  pointer-events: none;
-  user-select: none;
-  color: rgba(255, 255, 255, 0.98) !important;
-  opacity: 0.28 !important;               /* más visible que antes */
-  filter: none !important;               /* quitamos blur para que se noten */
-  mix-blend-mode: normal !important;
-  text-shadow: 0 2px 6px rgba(0,0,0,0.28) !important;
-  will-change: transform, opacity;
-  transform-origin: center;
-  transition: transform .28s ease, opacity .28s ease !important;
-  z-index: 2215 !important;              /* por encima del fondo pero debajo del card */
-}
-
-/* tamaños (forzados si el JS usa clases) */
-#introParticles .bg-item.trident.small  { font-size: 12px !important; }
-#introParticles .bg-item.trident.medium { font-size: 16px !important; }
-#introParticles .bg-item.trident.large  { font-size: 22px !important; }
-
-/* animación: si el JS añade duración/delay inline, esto será la keyframe usada */
-@keyframes tridentIntroFloat {
-  0%   { transform: translate3d(0,0,0) rotate(-6deg); opacity: 0.22; }
-  40%  { transform: translate3d(6px,-8px,0) rotate(3deg);  opacity: 0.34; }
-  80%  { transform: translate3d(-6px,-12px,0) rotate(6deg); opacity: 0.28; }
-  100% { transform: translate3d(0,0,0) rotate(-6deg); opacity: 0.22; }
-}
-
-/* aplicamos la animación por defecto (JS puede sobreescribir duración/delay) */
-#introParticles .bg-item.trident {
-  animation-name: tridentIntroFloat;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
-  animation-direction: alternate;
-}
-/* --- Mobile / small-screen tweaks --- */
-@media (max-width: 900px) {
-  :root{
-    --container-vertical-margin: 28px;
-  }
-  .container{
-    padding:12px;
-    gap:8px;
-  }
+/* ---------------- Responsive base tweaks ---------------- */
+@media (max-width:900px){
+  :root{ --cell-size: clamp(56px, 14vw, 96px); --container-vertical-margin: 28px; }
+  .container{ max-width:96%; max-height: calc(100vh - 40px); padding:12px; gap:8px; }
   .intro-card{ width: min(92%, 480px); padding:12px; }
   .loading-bar-outer{ width:86%; height:10px; }
   .loading-text{ font-size:0.92rem; }
   .board{ padding:12px; gap: calc(var(--board-gap) * 0.8); }
 }
 
-/* Small phones */
-@media (max-width: 480px){
-  :root{
-    --cell-size: clamp(44px, 22vw, 72px);
-    --container-vertical-margin: 20px;
-  }
-
+/* Small phones general adjustments */
+@media (max-width:480px){
+  :root{ --cell-size: clamp(44px, 22vw, 72px); --container-vertical-margin: 20px; }
   body { padding: 10px; }
-
-  .container{
-    max-width: 100%;
-    border-radius:10px;
-    padding:10px;
-  }
-
-  .intro-card{
-    width: 92%;
-    padding: 10px;
-    gap:8px;
-  }
-
+  .container{ max-width: 100%; border-radius:10px; padding:10px; }
+  .intro-card{ width: 92%; padding: 10px; gap:8px; }
   .intro-card img#introLogo{ max-width: 46vw; }
-
-  .loading-bar-outer{
-    width: 88%;
-    height: 10px;
-  }
+  .loading-bar-outer{ width: 88%; height: 10px; }
   .loading-bar{ transition: width .14s linear; }
   .loading-text{ font-size:0.88rem; font-weight:800; }
 
@@ -391,85 +232,85 @@ body{
     padding:10px;
     border-radius:10px;
   }
-
   .cell{
     border-radius:10px;
     box-shadow: 0 8px 16px rgba(0,0,0,0.18);
     font-size: clamp(18px, 8vw, 32px);
   }
-
   .score-item strong{ font-size:0.78rem; }
   .score-item span{ font-size:0.96rem; }
-
   .banner-start{ padding:10px 14px; font-size:0.98rem; }
+}
 
-  /* Tridents: fewer, smaller, less opacity on mobile */
-  #bgTridents{ display: none; } /* hide heavy background layer on phones to improve clarity */
-  #bgEmojis{ display: none; }
+/* ---------------- Mobile visibility & performance adjustments ---------------- */
+/* We show a small, readable number of background tridents on mobile (overrides any earlier hide) */
+@media (max-width:480px){
+  #bgTridents { display: block !important; } /* ensure the layer is present */
+  #bgEmojis  { display: none !important; }  /* keep emojis hidden for clarity/perf */
 
-  #introParticles{
-    z-index: 2195;
-    pointer-events: none;
-    opacity: 1; /* visible by default on mobile */
-  }
-  #introParticles .bg-item.trident{
-    opacity: 0.18 !important;
+  /* Make background tridents subtle but legible on phones */
+  #bgTridents .bg-item.trident {
+    font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Twemoji Mozilla", sans-serif !important;
+    font-size: 10px !important;
+    color: rgba(255,255,255,0.95) !important;
+    opacity: 0.14 !important;
     filter: none !important;
-    text-shadow: 0 1px 0 rgba(0,0,0,0.18) !important;
-    font-size: 12px !important; /* base mobile size */
+    text-shadow: 0 1px 2px rgba(0,0,0,0.18) !important;
+    mix-blend-mode: normal !important;
+    z-index: 2185 !important; /* below introParticles but above bg */
+    transition: transform .24s ease, opacity .24s ease !important;
+  }
+
+  /* Intro particles on mobile: slightly stronger but lightweight */
+  #introParticles{ z-index: 2205 !important; pointer-events:none; opacity:1; }
+  #introParticles .bg-item.trident{
+    opacity: 0.22 !important;
+    filter: none !important;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.18) !important;
+    font-size: 12px !important;
     transition: transform .22s ease, opacity .22s ease !important;
     will-change: transform, opacity;
   }
-  #introParticles .bg-item.trident.small{ font-size:10px !important; opacity:0.14 !important; }
-  #introParticles .bg-item.trident.medium{ font-size:12px !important; opacity:0.18 !important; }
-  #introParticles .bg-item.trident.large{ font-size:14px !important; opacity:0.22 !important; }
+  #introParticles .bg-item.trident.small{ font-size:10px !important; opacity:0.16 !important; }
+  #introParticles .bg-item.trident.medium{ font-size:12px !important; opacity:0.20 !important; }
+  #introParticles .bg-item.trident.large{ font-size:14px !important; opacity:0.24 !important; }
 
-  /* Reduce animation intensity on mobile for battery/CPU */
+  /* Respect reduced motion preference on mobile */
   @media (prefers-reduced-motion: reduce){
-    #introParticles .bg-item.trident { animation: none !important; transition: none !important; }
+    #introParticles .bg-item.trident,
+    #bgTridents .bg-item.trident { animation: none !important; transition: none !important; }
   }
 }
 
-/* Very small devices (extra safe) */
-@media (max-width: 360px){
+/* Extra-small devices (safety) */
+@media (max-width:360px){
   :root{ --cell-size: clamp(40px, 24vw, 64px); }
   .intro-card img#introLogo{ max-width: 48vw; }
   .loading-text{ font-size:0.82rem; }
-  #introParticles .bg-item.trident{ opacity:0.16 !important; }
+  #introParticles .bg-item.trident{ opacity:0.18 !important; }
 }
 
-/* --- TRIDENTS: aumentar visibilidad permanente --- */
+/* ---------------- Optional stronger visibility (final override) ---------------- */
+/* If you want all tridents to be generally more visible, these rules reinforce that.
+   They are safe but can be adjusted if you want a subtler look. */
 #introParticles .bg-item.trident,
 #bgTridents .bg-item.trident {
   color: rgba(255,255,255,0.98) !important;
-  opacity: 0.34 !important;               /* mayor visibilidad */
-  filter: none !important;                /* quitar blur si existía */
+  opacity: 0.28 !important;
+  filter: none !important;
   text-shadow: 0 3px 10px rgba(0,0,0,0.36) !important;
   mix-blend-mode: normal !important;
   transition: transform .28s ease, opacity .28s ease !important;
 }
 
-/* tamaños más visibles */
+/* Sizes for stronger visibility */
 #introParticles .bg-item.trident.small  { font-size: 13px !important; }
 #introParticles .bg-item.trident.medium { font-size: 18px !important; }
 #introParticles .bg-item.trident.large  { font-size: 24px !important; }
 
-/* emojis de fondo (si querés también reforzarlos) */
+/* Emoji background reinforcement (if desired) */
 #bgEmojis .bg-item.emoji {
   opacity: 0.12 !important;
   filter: none !important;
   text-shadow: 0 2px 6px rgba(0,0,0,0.28) !important;
-}
-
-/* Forzar tridentes visibles en mobile */
-@media (max-width: 480px){
-  #bgTridents { display: block !important; } /* muestra algunos del fondo */
-  #bgTridents .bg-item.trident,
-  #introParticles .bg-item.trident {
-    font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji", "Twemoji Mozilla", sans-serif !important;
-    opacity: 0.22 !important;
-    filter: none !important;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.18) !important;
-  }
-  #introParticles{ z-index: 2205 !important; } /* se asegura encima de fondos pero debajo de paneles si hace falta */
 }
