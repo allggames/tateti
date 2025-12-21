@@ -206,67 +206,37 @@ function ensureIntroUI(){
 }
 
 function populateIntroParticles(){
-  // Asegura overlay y contenedor
-  introOverlay = introOverlay || document.getElementById('introOverlay');
-  if(!introOverlay) return;
-
-  introParticles = introParticles || document.getElementById('introParticles');
-  if(!introParticles){
-    introParticles = document.createElement('div');
-    introParticles.id = 'introParticles';
-    introParticles.style.position = 'absolute';
-    introParticles.style.inset = '0';
-    introParticles.style.zIndex = '2195';
-    introParticles.style.pointerEvents = 'none';
-    introOverlay.appendChild(introParticles);
-  }
-
-  // Limpia cualquier contenido viejo
+  ensureIntroUI(); // guarantees introParticles exists
+  if(!introParticles) return;
   introParticles.innerHTML = '';
 
-  // Usa rect del overlay (fallback a window)
   const rect = introOverlay.getBoundingClientRect();
   const W = Math.max(rect.width, window.innerWidth);
   const H = Math.max(rect.height, window.innerHeight);
-
-  // Cantidad adaptativa (ajustala si querés más o menos)
-  const count = Math.round(Math.max(8, Math.min(18, (W*H)/280000)));
+  const count = 12;
 
   for(let i=0;i<count;i++){
-    const node = document.createElement('div');
-    node.className = 'bg-item trident';
-    node.textContent = '🔱';
+    const span = document.createElement('div');
+    span.className = 'bg-item trident';
+    span.textContent = '🔱';
+    span.style.position = 'absolute';
+    span.style.left = `${Math.random() * W}px`;
+    span.style.top  = `${Math.random() * H}px`;
+    span.style.fontSize = `${12 + Math.round(Math.random()*26)}px`;
+    span.style.opacity = (0.03 + Math.random()*0.06).toString();
+    span.style.transform = `rotate(${(-20 + Math.random()*40).toFixed(1)}deg)`;
+    span.style.filter = 'blur(.22px)';
 
-    // posición aleatoria dentro del overlay
-    const x = Math.random() * (W - 20);
-    const y = Math.random() * (H - 20);
-    node.style.left = `${x}px`;
-    node.style.top  = `${y}px`;
+    // enforce animation inline so even if CSS loads late it animates
+    span.style.animationName = 'tatetiFloat';
+    span.style.animationDuration = (3 + Math.random()*5).toFixed(2) + 's';
+    span.style.animationDelay = (Math.random()*1.8).toFixed(2) + 's';
+    span.style.animationTimingFunction = 'ease-in-out';
+    span.style.animationIterationCount = 'infinite';
+    span.style.animationDirection = 'alternate';
 
-    // tamaño aleatorio (clases pequeñas/medianas/grandes)
-    const r = Math.random();
-    if(r < 0.45) node.classList.add('small');
-    else if(r < 0.88) node.classList.add('medium');
-    else node.classList.add('large');
-
-    // ligera variación en opacidad
-    node.style.opacity = (0.06 + Math.random()*0.12).toFixed(2);
-
-    // Duración y delay aleatorios (inline) para evitar sincronía
-    node.style.animationDuration = (3 + Math.random()*6).toFixed(2) + 's'; // 3s - 9s
-    node.style.animationDelay = (Math.random()*1.6).toFixed(2) + 's';
-
-    // rotación inicial leve para variar la orientación
-    node.style.transform = `rotate(${(-12 + Math.random()*24).toFixed(1)}deg)`;
-
-    introParticles.appendChild(node);
+    introParticles.appendChild(span);
   }
-
-  // Fade-in: añadimos clase visible (CSS controla la transición de opacity)
-  requestAnimationFrame(()=>{
-    introParticles.classList.add('visible');
-  });
-}
 
   // safety: if nothing was added (rare), create visible test tridents
   if(introParticles.childElementCount === 0){
