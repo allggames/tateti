@@ -174,22 +174,41 @@ function ensureIntroUI(){
 
 function populateIntroParticles(){
   if(!introOverlay) return;
-  ensureIntroUI();
-  if(!introParticles) return;
+  introParticles = by('introParticles');
+  if(!introParticles){
+    introParticles = document.createElement('div');
+    introParticles.id = 'introParticles';
+    introParticles.style.position = 'absolute';
+    introParticles.style.inset = '0';
+    introParticles.style.pointerEvents = 'none';
+    introOverlay.appendChild(introParticles);
+  }
   introParticles.innerHTML = '';
   const rect = introOverlay.getBoundingClientRect();
-  const cnt = 12;
-  for(let i=0;i<cnt;i++){
+  const count = 12;
+  for(let i=0;i<count;i++){
+    const size = 12 + Math.round(Math.random()*26);
+    const opacity = 0.03 + Math.random()*0.04; // más suave
+    const rot = (-20 + Math.random()*40).toFixed(1);
+    const px = Math.random() * rect.width;
+    const py = Math.random() * rect.height;
     const span = document.createElement('div');
     span.className = 'bg-item trident';
     span.textContent = '🔱';
     span.style.position = 'absolute';
-    span.style.left = `${Math.random() * rect.width}px`;
-    span.style.top = `${Math.random() * rect.height}px`;
-    span.style.fontSize = `${12 + Math.round(Math.random()*22)}px`;
-    span.style.opacity = `${0.03 + Math.random()*0.05}`;
-    span.style.transform = `rotate(${(-20 + Math.random()*40).toFixed(1)}deg)`;
+    span.style.left = `${px}px`;
+    span.style.top = `${py}px`;
+    span.style.fontSize = `${size}px`;
+    span.style.opacity = `${opacity}`;
+    span.style.transform = `rotate(${rot}deg)`;
     span.style.filter = 'blur(.25px)';
+
+    // animación: duración y delay aleatorios para evitar sincronía
+    const dur = (3 + Math.random()*3).toFixed(2) + 's';      // 3s — 6s
+    const delay = (Math.random()*1.8).toFixed(2) + 's';      // 0s — 1.8s
+    span.style.animationDuration = dur;
+    span.style.animationDelay = delay;
+
     introParticles.appendChild(span);
   }
 }
