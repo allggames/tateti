@@ -40,6 +40,14 @@ function getTodayKey(){
   return (new Date()).toISOString().slice(0,10); // YYYY-MM-DD
 }
 
+// Devuelve el texto final del premio según victorias (sólo esta función es nueva)
+function finalBonusText(w) {
+  if (!w || w <= 0) return { percent: 0, text: 'No obtuviste bono (0 victorias).' };
+  if (w === 1) return { percent: 100, text: 'BONO DEL 100% + 1000 FICHAS GRATIS👀' };
+  if (w === 2) return { percent: 150, text: 'BONO DEL 150% + 1500 FICHAS GRATIS🧐' };
+  return          { percent: 200, text: 'BONO DEL 200% + 2000 FICHAS GRATIS🤯' };
+}
+
 // Loads saved state (if any) into memory (does NOT auto-reset daily)
 function loadState(){
   try{
@@ -420,9 +428,9 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   window.addEventListener('resize', ()=>{ try{ populateBackground(); }catch(e){} });
 
   if(state.plays >= MAX_PLAYS){
-    const bp = bonusPercent(state.playerWins);
-    if(modalPercent) modalPercent.textContent = `${bp}%`;
-    if(modalMessage) modalMessage.textContent = (bp>0)?`Has obtenido ${bp}% por ${state.playerWins} victoria(s).`:`No obtuviste bono (0 victorias).`;
+    const info = finalBonusText(state.playerWins);
+    if(modalPercent) modalPercent.textContent = `${info.percent}%`;
+    if(modalMessage) modalMessage.textContent = info.text;
     if(resultModal) resultModal.classList.remove('hidden');
   } else {
     await showIntroThenProceed();
@@ -476,7 +484,12 @@ function handleEnd(winner){
   checkPlaysLimitUI();
   if(state.plays < MAX_PLAYS){
     setTimeout(()=>{ board = Array(9).fill(null); resetBoardUI(); currentTurn = playerSymbol; running = true; message(`Siguiente partida iniciada — Partida ${state.plays + 1} de ${MAX_PLAYS}`); showBoardLogo(); }, 900);
-  } else {
-    setTimeout(()=>{ const bp = bonusPercent(state.playerWins); if(modalPercent) modalPercent.textContent = `${bp}%`; if(modalMessage) modalMessage.textContent = (bp>0) ? `Has obtenido ${bp}% por ${state.playerWins} victoria(s).` : `No obtuviste bono (0 victorias).`; if(resultModal) resultModal.classList.remove('hidden'); hideBoardLogo(); }, 700);
+    } else {
+    setTimeout(()=>{
+      const info = finalBonusText(state.playerWins);
+      if(modalPercent) modalPercent.textContent = `${info.percent}%`;
+      if(modalMessage) modalMessage.textContent = info.text;
+      if(resultModal) resultModal.classList.remove('hidden');
+      hideBoardLogo();
+    }, 700);
   }
-}
