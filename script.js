@@ -499,9 +499,16 @@ function handleEnd(winner){
   updateScoreboardUI();
   updatePlaysUI();
   checkPlaysLimitUI();
-  if(state.plays < MAX_PLAYS){
-    setTimeout(()=>{ board = Array(9).fill(null); resetBoardUI(); currentTurn = playerSymbol; running = true; message(`Siguiente partida iniciada — Partida ${state.plays + 1} de ${MAX_PLAYS}`); showBoardLogo(); }, 900);
-  }  } else {
+   if(state.plays < MAX_PLAYS){
+    setTimeout(()=>{
+      board = Array(9).fill(null);
+      resetBoardUI();
+      currentTurn = playerSymbol;
+      running = true;
+      message(`Siguiente partida iniciada — Partida ${state.plays + 1} de ${MAX_PLAYS}`);
+      showBoardLogo();
+    }, 900);
+  } else {
     setTimeout(()=>{
       const info = finalBonusText(state.playerWins);
 
