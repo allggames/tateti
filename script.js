@@ -1,5 +1,7 @@
-// script.js — mantiene todo igual salvo la inserción mínima para mostrar
-// los textos de premio finales solicitados. Reemplaza tu script.js por este archivo y luego Ctrl+F5.
+// script.js — versión segura y corregida. Reemplazá completamente tu script.js por este archivo.
+// Luego recargá con Ctrl+F5.
+
+console.log('[tateti] script start');
 
 const cpuName = 'NEXUS';
 const WIN_COMBINATIONS = [
@@ -21,7 +23,7 @@ let cpuThinking = false;
 let sessionStarted = false;
 let state = { playerWins:0, cpuWins:0, plays:0 };
 
-// DOM refs
+// DOM refs (populated on DOMContentLoaded)
 let boardEl, cells, messageEl;
 let introOverlay, introCard, introParticles;
 let loadingBar, loadingText;
@@ -48,7 +50,7 @@ function finalBonusText(w) {
   return          { percent: 200, text: 'BONO DEL 200% + 2000 FICHAS GRATIS🤯' };
 }
 
-// Loads saved state (if any) into memory (does NOT auto-reset daily)
+/* ---------- Persistence ---------- */
 function loadState(){
   try{
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -60,16 +62,13 @@ function loadState(){
   updatePlaysUI();
   checkPlaysLimitUI();
 }
-
-// Saves current state to storage
 function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
 
-// Check and reset daily counters if a new day started
+/* ---------- Daily reset ---------- */
 function checkAndResetDaily(){
   const today = getTodayKey();
   const last = localStorage.getItem(DATE_KEY);
   if(last !== today){
-    // Reset daily access: plays and daily wins (so device can access again today)
     state.plays = 0;
     state.playerWins = 0;
     state.cpuWins = 0;
@@ -81,28 +80,18 @@ function checkAndResetDaily(){
   updatePlaysUI();
   checkPlaysLimitUI();
 }
-
-// Schedule automatic reset at next midnight while page is open
 function scheduleMidnightReset(){
   const now = new Date();
-  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 0, 0, 2); // 2s after midnight
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 0, 0, 2);
   const ms = next - now;
-  if(ms <= 0) {
-    // fallback: re-run soon
-    setTimeout(()=>{
-      checkAndResetDaily();
-      scheduleMidnightReset();
-    }, 1000 * 60);
+  if(ms <= 0){
+    setTimeout(()=>{ checkAndResetDaily(); scheduleMidnightReset(); }, 60*1000);
     return;
   }
-  setTimeout(()=>{
-    checkAndResetDaily();
-    updateDateUI();
-    scheduleMidnightReset();
-  }, ms);
+  setTimeout(()=>{ checkAndResetDaily(); updateDateUI(); scheduleMidnightReset(); }, ms);
 }
 
-/* ---------- Background helper (unchanged / with emoji fallback) ---------- */
+/* ---------- Background helpers ---------- */
 function createBgLayer(id){
   let el = by(id);
   if(!el){
@@ -117,12 +106,10 @@ function createBgLayer(id){
   return el;
 }
 
-/* Populate global background (tridents + emojis) */
 function populateBackground(){
   bgTridents = createBgLayer('bgTridents');
   bgEmojis  = createBgLayer('bgEmojis');
 
-  // Force bgEmojis visible (override CSS mobile hide if present)
   if(bgEmojis){
     bgEmojis.style.setProperty('display','block','important');
     bgEmojis.style.pointerEvents = 'none';
@@ -152,14 +139,11 @@ function populateBackground(){
         attempts++;
       } while(!ok && attempts < 40);
       placed.push({x,y});
-
       const node = factory();
       if(!node) continue;
-
       node.style.position = node.style.position || 'absolute';
       node.style.left = node.style.left || `${x}px`;
       node.style.top  = node.style.top  || `${y}px`;
-
       const dur = mobile ? (2.6 + Math.random()*2).toFixed(2) + 's' : (4 + Math.random()*4).toFixed(2) + 's';
       node.style.animationName = node.style.animationName || 'tridentIntroFloat';
       node.style.animationDuration = dur;
@@ -167,7 +151,6 @@ function populateBackground(){
       node.style.animationTimingFunction = 'ease-in-out';
       node.style.animationIterationCount = 'infinite';
       node.style.animationDirection = 'alternate';
-
       container.appendChild(node);
     }
   }
@@ -192,15 +175,8 @@ function populateBackground(){
   place(bgEmojis, emCount, () => {
     const elIsMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 480;
     const ch = emojis[Math.floor(Math.random()*emojis.length)];
-
     if(elIsMobile){
-      // use lightweight SVG fallback on mobile for consistent rendering
-      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'>
-        <g fill='none' fill-rule='evenodd'>
-          <rect x='2' y='6' width='20' height='12' rx='3' fill='%23FFD9B3' stroke='%23F17321' stroke-width='0.8'/>
-          <path d='M6 8c1.2-2 4-2.5 6-1.6C14 6.5 16.3 6 18 8' stroke='%23F17321' stroke-width='0.8' fill='none' stroke-linecap='round'/>
-        </g>
-      </svg>`;
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'><g fill='none' fill-rule='evenodd'><rect x='2' y='6' width='20' height='12' rx='3' fill='%23FFD9B3' stroke='%23F17321' stroke-width='0.8'/><path d='M6 8c1.2-2 4-2.5 6-1.6C14 6.5 16.3 6 18 8' stroke='%23F17321' stroke-width='0.8' fill='none' stroke-linecap='round'/></g></svg>`;
       const img = document.createElement('img');
       img.className = 'bg-item emoji';
       img.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
@@ -230,7 +206,7 @@ function populateBackground(){
   }, 40);
 }
 
-/* ---------- Intro particles (unchanged) ---------- */
+/* ---------- Intro particles ---------- */
 function ensureIntroParticlesContainer(){
   introOverlay = introOverlay || by('introOverlay');
   if(!introOverlay) return false;
@@ -246,15 +222,12 @@ function ensureIntroParticlesContainer(){
   }
   return true;
 }
-
 function populateIntroParticles(){
   if(!ensureIntroParticlesContainer()) return;
   introParticles.innerHTML = '';
-
   const rect = introOverlay.getBoundingClientRect();
   const W = Math.max(rect.width, window.innerWidth);
   const H = Math.max(rect.height, window.innerHeight);
-
   const count = Math.round(Math.max(8, Math.min(18, (W*H)/280000)));
   for(let i=0;i<count;i++){
     const node = document.createElement('div');
@@ -263,28 +236,21 @@ function populateIntroParticles(){
     node.style.position = 'absolute';
     node.style.left = `${Math.random() * Math.max(200, W)}px`;
     node.style.top  = `${Math.random() * Math.max(200, H)}px`;
-
     const r = Math.random();
     node.style.fontSize = (r < 0.45 ? 12 : (r < 0.86 ? 16 : 22)) + 'px';
-
     node.style.setProperty('color','rgba(255,255,255,0.98)','important');
     node.style.setProperty('opacity', (0.22 + Math.random()*0.12).toFixed(2), 'important');
     node.style.setProperty('filter','none','important');
     node.style.setProperty('text-shadow','0 2px 6px rgba(0,0,0,0.28)','important');
-
     node.style.animationName = 'tridentIntroFloat';
     node.style.animationDuration = (3 + Math.random()*6).toFixed(2) + 's';
     node.style.animationDelay = (Math.random()*1.6).toFixed(2) + 's';
     node.style.animationTimingFunction = 'ease-in-out';
     node.style.animationIterationCount = 'infinite';
     node.style.animationDirection = 'alternate';
-
     introParticles.appendChild(node);
   }
-
-  requestAnimationFrame(()=> {
-    if(introParticles) introParticles.classList.add('visible');
-  });
+  requestAnimationFrame(()=> { if(introParticles) introParticles.classList.add('visible'); });
 }
 
 /* ---------- Date UI ---------- */
@@ -293,7 +259,6 @@ function updateDateUI(){
   if(!el){
     el = document.createElement('div');
     el.id = 'currentDate';
-    // minimal styling (you can override in CSS)
     el.style.position = 'fixed';
     el.style.left = '50%';
     el.style.transform = 'translateX(-50%)';
@@ -309,7 +274,6 @@ function updateDateUI(){
     document.body.appendChild(el);
   }
   const now = new Date();
-  // show localized date + day name
   const opts = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
   el.textContent = now.toLocaleDateString(undefined, opts);
 }
@@ -321,7 +285,6 @@ function animateLoading(duration){
       setTimeout(resolve, duration);
       return;
     }
-
     const start = performance.now();
     function step(now){
       const pct = Math.min(1, (now - start) / duration);
@@ -356,23 +319,17 @@ function hideBanner(){ const b = by('opponentBanner'); if(!b) return; b.classLis
 async function showIntroThenProceed(){
   introOverlay = introOverlay || by('introOverlay');
   if(!introOverlay){ attachStartListener(); showBanner(); return; }
-
   introOverlay.classList.remove('hidden');
   introOverlay.setAttribute('aria-hidden','false');
-
   try{ populateBackground(); }catch(e){ dbg('populateBackground err', e); }
   try{ populateIntroParticles(); }catch(e){ dbg('populateIntroParticles err', e); }
-
   try { await animateLoading(INTRO_DURATION); } catch(e){ console.error('animateLoading', e); }
-
   if(introParticles){
     introParticles.classList.remove('visible');
     setTimeout(()=>{ if(introParticles) introParticles.innerHTML = ''; }, 300);
   }
-
   introOverlay.classList.add('hidden');
   introOverlay.setAttribute('aria-hidden','true');
-
   attachStartListener();
   showBanner();
   dbg('Intro finished; banner shown');
@@ -380,81 +337,58 @@ async function showIntroThenProceed(){
 
 /* ---------- Init ---------- */
 document.addEventListener('DOMContentLoaded', async ()=>{
-  // refs
-  boardEl = by('board'); cells = Array.from(document.querySelectorAll('.cell')); messageEl = by('message');
-
-  introOverlay = by('introOverlay'); introCard = introOverlay ? introOverlay.querySelector('.intro-card') : null;
-  introParticles = by('introParticles'); // may be null
-
-  opponentBanner = by('opponentBanner'); startBtn = by('startBtn');
-
-  playerWinsEl = by('playerWins'); cpuWinsEl = by('cpuWins'); playerBonusPercentEl = by('playerBonusPercent'); cpuBonusPercentEl = by('cpuBonusPercent'); playsLeftEl = by('playsLeft');
-
-  resultModal = by('resultModal'); modalPercent = by('modalPercent'); modalMessage = by('modalMessage'); modalClose = by('modalClose');
-  boardLogo = by('boardLogo');
-
-  // Reference existing loading elements (important)
-  loadingBar = by('loadingBar');
-  loadingText = by('loadingText');
-
-  if(!boardEl || !cells.length || !messageEl){
-    console.error('FATAL: elementos faltantes');
-    return;
-  }
-
-  if(modalClose) modalClose.addEventListener('click', ()=>{ if(resultModal) resultModal.classList.add('hidden'); });
-  cells.forEach(c => c.addEventListener('click', onCellClick));
-  document.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !sessionStarted && opponentBanner && !opponentBanner.classList.contains('hidden')){ hideBanner(); startGame(); } });
-
-  // load state then check daily reset
-  loadState();
-  checkAndResetDaily();
-  // show date and schedule automatic midnight reset
-  updateDateUI();
-  scheduleMidnightReset();
-
-  setActiveChoice(); resetBoardUI();
-
-  // ensure overlays initial hidden state
-  if(introOverlay) introOverlay.classList.add('hidden');
-  if(opponentBanner) opponentBanner.classList.add('hidden');
-  if(resultModal) resultModal.classList.add('hidden');
-
-  // prepare backgrounds/particles early so they exist when intro shows
-  try{ populateBackground(); }catch(e){ dbg('populateBackground error', e); }
-  try{ populateIntroParticles(); }catch(e){ dbg('populateIntroParticles error', e); }
-
-  // responsive: regenerate background on resize
-  window.addEventListener('resize', ()=>{ try{ populateBackground(); }catch(e){} });
-
-  if(state.plays >= MAX_PLAYS){
-    const info = finalBonusText(state.playerWins);
-
-    // ocultamos la línea grande del porcentaje si existe
-    if(modalPercent){
-      modalPercent.textContent = '';
-      modalPercent.style.display = 'none';
+  try{
+    console.log('[tateti] DOMContentLoaded start');
+    // refs
+    boardEl = by('board'); cells = Array.from(document.querySelectorAll('.cell')); messageEl = by('message');
+    introOverlay = by('introOverlay'); introCard = introOverlay ? introOverlay.querySelector('.intro-card') : null;
+    introParticles = by('introParticles');
+    opponentBanner = by('opponentBanner'); startBtn = by('startBtn');
+    playerWinsEl = by('playerWins'); cpuWinsEl = by('cpuWins'); playerBonusPercentEl = by('playerBonusPercent'); cpuBonusPercentEl = by('cpuBonusPercent'); playsLeftEl = by('playsLeft');
+    resultModal = by('resultModal'); modalPercent = by('modalPercent'); modalMessage = by('modalMessage'); modalClose = by('modalClose');
+    boardLogo = by('boardLogo');
+    loadingBar = by('loadingBar'); loadingText = by('loadingText');
+    if(!boardEl || !cells.length || !messageEl){
+      console.error('[tateti] FATAL: elementos faltantes', { boardEl, cellsLength: cells.length, messageEl });
+      return;
     }
-
-    // mostramos SOLO el texto requerido + línea secundaria "CON CARGA MÍNIMA"
-    if(modalMessage){
-      modalMessage.innerHTML = `
-        <div style="font-size:1.18rem; font-weight:800; line-height:1.2; text-align:center;">
-          ${info.text}
-        </div>
-        <div style="margin-top:10px; font-size:0.92rem; font-weight:700; text-align:center;">
-          CON CARGA MÍNIMA
-        </div>
-      `;
+    if(modalClose) modalClose.addEventListener('click', ()=>{ if(resultModal) resultModal.classList.add('hidden'); });
+    cells.forEach(c => c.addEventListener('click', onCellClick));
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !sessionStarted && opponentBanner && !opponentBanner.classList.contains('hidden')){ hideBanner(); startGame(); } });
+    // load state then check daily reset
+    loadState();
+    checkAndResetDaily();
+    updateDateUI();
+    scheduleMidnightReset();
+    setActiveChoice(); resetBoardUI();
+    if(introOverlay) introOverlay.classList.add('hidden');
+    if(opponentBanner) opponentBanner.classList.add('hidden');
+    if(resultModal) resultModal.classList.add('hidden');
+    try{ populateBackground(); }catch(e){ dbg('populateBackground error', e); }
+    try{ populateIntroParticles(); }catch(e){ dbg('populateIntroParticles error', e); }
+    window.addEventListener('resize', ()=>{ try{ populateBackground(); }catch(e){} });
+    if(state.plays >= MAX_PLAYS){
+      const info = finalBonusText(state.playerWins);
+      if(modalPercent){ modalPercent.textContent = ''; modalPercent.style.display = 'none'; }
+      if(modalMessage){
+        modalMessage.innerHTML = `
+          <div style="font-size:1.18rem; font-weight:800; line-height:1.2; text-align:center;">
+            ${info.text}
+          </div>
+          <div style="margin-top:10px; font-size:0.92rem; font-weight:700; text-align:center;">
+            CON CARGA MÍNIMA
+          </div>
+        `;
+      }
+      if(resultModal) resultModal.classList.remove('hidden');
+    } else {
+      await showIntroThenProceed();
     }
-
-    if(resultModal) resultModal.classList.remove('hidden');
-  } else {
-    await showIntroThenProceed();
+    attachStartListener();
+    dbg('Init complete');
+  }catch(err){
+    console.error('[tateti] error in DOMContentLoaded handler', err);
   }
-
-  attachStartListener();
-  dbg('Init complete');
 });
 
 /* ---------- Game logic (unchanged) ---------- */
@@ -478,6 +412,8 @@ function cpuRandomMove(){ const avail = availableMoves(board); if(avail.length==
 function availableMoves(b){ return b.map((v,i)=> v===null?i:null).filter(v=>v!==null); }
 function findWinningMove(b,sym){ for(const i of availableMoves(b)){ b[i]=sym; const w=checkWinner(b); b[i]=null; if(w===sym) return i; } return null; }
 function checkWinner(b){ for(const [a,b1,c] of WIN_COMBINATIONS){ if(b[a] && b[a]===b[b1] && b[a]===b[c]) return b[a]; } if(b.every(v=>v!==null)) return 'D'; return null; }
+
+// handleEnd (with fixed block structure)
 function handleEnd(winner){
   running=false;
   if(state.plays < MAX_PLAYS) state.plays += 1;
@@ -499,7 +435,8 @@ function handleEnd(winner){
   updateScoreboardUI();
   updatePlaysUI();
   checkPlaysLimitUI();
-   if(state.plays < MAX_PLAYS){
+
+  if(state.plays < MAX_PLAYS){
     setTimeout(()=>{
       board = Array(9).fill(null);
       resetBoardUI();
@@ -510,25 +447,27 @@ function handleEnd(winner){
     }, 900);
   } else {
     setTimeout(()=>{
-      const info = finalBonusText(state.playerWins);
-
-      if(modalPercent){
-        modalPercent.textContent = '';
-        modalPercent.style.display = 'none';
+      try{
+        const info = finalBonusText(state.playerWins);
+        if(modalPercent){
+          modalPercent.textContent = '';
+          modalPercent.style.display = 'none';
+        }
+        if(modalMessage){
+          modalMessage.innerHTML = `
+            <div style="font-size:1.18rem; font-weight:800; line-height:1.2; text-align:center;">
+              ${info.text}
+            </div>
+            <div style="margin-top:10px; font-size:0.92rem; font-weight:700; text-align:center;">
+              CON CARGA MÍNIMA
+            </div>
+          `;
+        }
+        if(resultModal) resultModal.classList.remove('hidden');
+        hideBoardLogo();
+      }catch(err){
+        console.error('[tateti] error showing final modal', err);
       }
-
-      if(modalMessage){
-        modalMessage.innerHTML = `
-          <div style="font-size:1.18rem; font-weight:800; line-height:1.2; text-align:center;">
-            ${info.text}
-          </div>
-          <div style="margin-top:10px; font-size:0.92rem; font-weight:700; text-align:center;">
-            CON CARGA MÍNIMA
-          </div>
-        `;
-      }
-
-      if(resultModal) resultModal.classList.remove('hidden');
-      hideBoardLogo();
     }, 700);
   }
+}
