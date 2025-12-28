@@ -1,5 +1,5 @@
-// script.js — añade reinicio diario del acceso y muestra la fecha abajo.
-// Reemplaza tu script.js por este archivo y luego Ctrl+F5.
+// script.js — mantiene todo igual salvo la inserción mínima para mostrar
+// los textos de premio finales solicitados. Reemplaza tu script.js por este archivo y luego Ctrl+F5.
 
 const cpuName = 'NEXUS';
 const WIN_COMBINATIONS = [
@@ -484,7 +484,7 @@ function handleEnd(winner){
   checkPlaysLimitUI();
   if(state.plays < MAX_PLAYS){
     setTimeout(()=>{ board = Array(9).fill(null); resetBoardUI(); currentTurn = playerSymbol; running = true; message(`Siguiente partida iniciada — Partida ${state.plays + 1} de ${MAX_PLAYS}`); showBoardLogo(); }, 900);
-    } else {
+  } else {
     setTimeout(()=>{
       const info = finalBonusText(state.playerWins);
       if(modalPercent) modalPercent.textContent = `${info.percent}%`;
@@ -493,3 +493,4 @@ function handleEnd(winner){
       hideBoardLogo();
     }, 700);
   }
+}
