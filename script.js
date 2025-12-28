@@ -429,8 +429,25 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 
   if(state.plays >= MAX_PLAYS){
     const info = finalBonusText(state.playerWins);
-    if(modalPercent) modalPercent.textContent = `${info.percent}%`;
-    if(modalMessage) modalMessage.textContent = info.text;
+
+    // ocultamos la línea grande del porcentaje si existe
+    if(modalPercent){
+      modalPercent.textContent = '';
+      modalPercent.style.display = 'none';
+    }
+
+    // mostramos SOLO el texto requerido + línea secundaria "CON CARGA MÍNIMA"
+    if(modalMessage){
+      modalMessage.innerHTML = `
+        <div style="font-size:1.18rem; font-weight:800; line-height:1.2; text-align:center;">
+          ${info.text}
+        </div>
+        <div style="margin-top:10px; font-size:0.92rem; font-weight:700; text-align:center;">
+          CON CARGA MÍNIMA
+        </div>
+      `;
+    }
+
     if(resultModal) resultModal.classList.remove('hidden');
   } else {
     await showIntroThenProceed();
@@ -484,13 +501,27 @@ function handleEnd(winner){
   checkPlaysLimitUI();
   if(state.plays < MAX_PLAYS){
     setTimeout(()=>{ board = Array(9).fill(null); resetBoardUI(); currentTurn = playerSymbol; running = true; message(`Siguiente partida iniciada — Partida ${state.plays + 1} de ${MAX_PLAYS}`); showBoardLogo(); }, 900);
-  } else {
+  }  } else {
     setTimeout(()=>{
       const info = finalBonusText(state.playerWins);
-      if(modalPercent) modalPercent.textContent = `${info.percent}%`;
-      if(modalMessage) modalMessage.textContent = info.text;
+
+      if(modalPercent){
+        modalPercent.textContent = '';
+        modalPercent.style.display = 'none';
+      }
+
+      if(modalMessage){
+        modalMessage.innerHTML = `
+          <div style="font-size:1.18rem; font-weight:800; line-height:1.2; text-align:center;">
+            ${info.text}
+          </div>
+          <div style="margin-top:10px; font-size:0.92rem; font-weight:700; text-align:center;">
+            CON CARGA MÍNIMA
+          </div>
+        `;
+      }
+
       if(resultModal) resultModal.classList.remove('hidden');
       hideBoardLogo();
     }, 700);
   }
-}
