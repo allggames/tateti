@@ -1,6 +1,5 @@
-// script.js — versión corregida (no rompe nada): mantiene la barra de carga,
-// hace visibles los emojis/tridentes en móvil y añade un fallback SVG para móviles.
-// Reemplaza TODO tu script.js por este archivo y recarga (Ctrl+F5).
+// script.js — añade reinicio diario del acceso y muestra la fecha abajo.
+// Reemplaza tu script.js por este archivo y luego Ctrl+F5.
 
 const cpuName = 'NEXUS';
 const WIN_COMBINATIONS = [
@@ -10,6 +9,7 @@ const WIN_COMBINATIONS = [
 ];
 const MAX_PLAYS = 3;
 const STORAGE_KEY = 'tatetiState_v2';
+const DATE_KEY = 'tatetiLastDate_v1';
 const INTRO_DURATION = 1600;
 
 let board = Array(9).fill(null);
@@ -35,7 +35,66 @@ function dbg(...a){ console.debug('[tateti]', ...a); }
 function symbolToEmoji(s){ return s === 'X' ? '❌' : (s === 'O' ? '⭕' : s); }
 function message(txt){ if(messageEl) messageEl.textContent = txt; }
 
-/* Background helper - ensures container exists */
+/* ---------- Daily helpers ---------- */
+function getTodayKey(){
+  return (new Date()).toISOString().slice(0,10); // YYYY-MM-DD
+}
+
+// Loads saved state (if any) into memory (does NOT auto-reset daily)
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw) state = JSON.parse(raw);
+  }catch(e){
+    state = {playerWins:0,cpuWins:0,plays:0};
+  }
+  updateScoreboardUI();
+  updatePlaysUI();
+  checkPlaysLimitUI();
+}
+
+// Saves current state to storage
+function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
+
+// Check and reset daily counters if a new day started
+function checkAndResetDaily(){
+  const today = getTodayKey();
+  const last = localStorage.getItem(DATE_KEY);
+  if(last !== today){
+    // Reset daily access: plays and daily wins (so device can access again today)
+    state.plays = 0;
+    state.playerWins = 0;
+    state.cpuWins = 0;
+    saveState();
+    localStorage.setItem(DATE_KEY, today);
+    dbg('Applied daily reset for', today);
+  }
+  updateScoreboardUI();
+  updatePlaysUI();
+  checkPlaysLimitUI();
+}
+
+// Schedule automatic reset at next midnight while page is open
+function scheduleMidnightReset(){
+  const now = new Date();
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate()+1, 0, 0, 2); // 2s after midnight
+  const ms = next - now;
+  if(ms <= 0) {
+    // fallback: re-run soon
+    setTimeout(()=>{
+      checkAndResetDaily();
+      scheduleMidnightReset();
+    }, 1000 * 60);
+    return;
+  }
+  setTimeout(()=>{
+    checkAndResetDaily();
+    updateDateUI();
+    scheduleMidnightReset();
+  }, ms);
+}
+
+/* ---------- Background helper (unchanged / with emoji fallback) ---------- */
 function createBgLayer(id){
   let el = by(id);
   if(!el){
@@ -50,7 +109,7 @@ function createBgLayer(id){
   return el;
 }
 
-/* ---------- Populate global background (tridents + emojis) ---------- */
+/* Populate global background (tridents + emojis) */
 function populateBackground(){
   bgTridents = createBgLayer('bgTridents');
   bgEmojis  = createBgLayer('bgEmojis');
@@ -87,15 +146,12 @@ function populateBackground(){
       placed.push({x,y});
 
       const node = factory();
-      // factory might return null in edge cases
       if(!node) continue;
 
-      // ensure position only if not already set by factory (images etc.)
       node.style.position = node.style.position || 'absolute';
       node.style.left = node.style.left || `${x}px`;
       node.style.top  = node.style.top  || `${y}px`;
 
-      // animation durations shorter on mobile
       const dur = mobile ? (2.6 + Math.random()*2).toFixed(2) + 's' : (4 + Math.random()*4).toFixed(2) + 's';
       node.style.animationName = node.style.animationName || 'tridentIntroFloat';
       node.style.animationDuration = dur;
@@ -108,7 +164,6 @@ function populateBackground(){
     }
   }
 
-  // Tridents background (reduced on mobile)
   const trCount = Math.round(Math.max(6, Math.min(30, (W*H)/250000)));
   place(bgTridents, trCount, () => {
     const el = document.createElement('div');
@@ -124,17 +179,14 @@ function populateBackground(){
     return el;
   }, 50);
 
-  // Emojis background: use SVG fallback on mobile to avoid platform/font issues
   const emojis = ['⭕','❌','🎁','✨'];
   const emCount = Math.round(Math.max(6, Math.min(18, (W*H)/300000)));
-
   place(bgEmojis, emCount, () => {
-    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 480;
-    // choose random symbol (for non-mobile) - for mobile we provide a neutral SVG icon (gift-like)
+    const elIsMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 480;
     const ch = emojis[Math.floor(Math.random()*emojis.length)];
 
-    if(isMobile){
-      // Lightweight SVG fallback (data URI) so it's always visible on mobile
+    if(elIsMobile){
+      // use lightweight SVG fallback on mobile for consistent rendering
       const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'>
         <g fill='none' fill-rule='evenodd'>
           <rect x='2' y='6' width='20' height='12' rx='3' fill='%23FFD9B3' stroke='%23F17321' stroke-width='0.8'/>
@@ -157,13 +209,11 @@ function populateBackground(){
       const el = document.createElement('div');
       el.className = 'bg-item emoji';
       el.textContent = ch;
-      const size = 12 + Math.floor(Math.random()*26);
-      el.style.fontSize = `${size}px`;
+      el.style.fontSize = `${12 + Math.floor(Math.random()*26)}px`;
       el.style.opacity = (0.02 + Math.random()*0.05).toString();
       el.style.transform = `rotate(${(-25 + Math.random()*50).toFixed(1)}deg)`;
       el.style.pointerEvents = 'none';
       el.style.userSelect = 'none';
-      // make desktop emojis slightly visible but subtle
       el.style.setProperty('font-family', '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji","Twemoji Mozilla", sans-serif', 'important');
       el.style.setProperty('color', 'rgba(255,255,255,0.98)', 'important');
       el.style.setProperty('filter', 'none', 'important');
@@ -172,7 +222,7 @@ function populateBackground(){
   }, 40);
 }
 
-/* ---------- Intro particles (only for the intro overlay) ---------- */
+/* ---------- Intro particles (unchanged) ---------- */
 function ensureIntroParticlesContainer(){
   introOverlay = introOverlay || by('introOverlay');
   if(!introOverlay) return false;
@@ -180,7 +230,6 @@ function ensureIntroParticlesContainer(){
   if(!introParticles){
     introParticles = document.createElement('div');
     introParticles.id = 'introParticles';
-    // Place introParticles below loading bar z-index (loading bar z-index is ~2215 in CSS)
     introParticles.style.position = 'absolute';
     introParticles.style.inset = '0';
     introParticles.style.zIndex = '2195';
@@ -197,33 +246,27 @@ function populateIntroParticles(){
   const rect = introOverlay.getBoundingClientRect();
   const W = Math.max(rect.width, window.innerWidth);
   const H = Math.max(rect.height, window.innerHeight);
-  const mobile = window.innerWidth <= 480;
-  const count = Math.max(4, Math.round(Math.max(6, Math.min(16, (W*H)/280000)) * (mobile ? 0.45 : 1)));
 
+  const count = Math.round(Math.max(8, Math.min(18, (W*H)/280000)));
   for(let i=0;i<count;i++){
     const node = document.createElement('div');
     node.className = 'bg-item trident';
     node.textContent = '🔱';
     node.style.position = 'absolute';
-    node.style.left = `${Math.random() * Math.max(150, W)}px`;
-    node.style.top  = `${Math.random() * Math.max(150, H)}px`;
+    node.style.left = `${Math.random() * Math.max(200, W)}px`;
+    node.style.top  = `${Math.random() * Math.max(200, H)}px`;
 
     const r = Math.random();
-    const size = mobile ? (r < 0.5 ? 10 : (r < 0.9 ? 12 : 14)) : (r < 0.45 ? 12 : (r < 0.86 ? 16 : 22));
-    node.style.fontSize = `${size}px`;
+    node.style.fontSize = (r < 0.45 ? 12 : (r < 0.86 ? 16 : 22)) + 'px';
 
-    node.style.setProperty('color', 'rgba(255,255,255,0.98)', 'important');
-    node.style.setProperty('opacity', (mobile ? (0.18 + Math.random()*0.12) : (0.20 + Math.random()*0.20)).toFixed(2), 'important');
-    node.style.setProperty('filter', 'none', 'important');
-    node.style.setProperty('text-shadow', '0 2px 6px rgba(0,0,0,0.28)', 'important');
-    node.style.setProperty('mix-blend-mode', 'normal', 'important');
-    node.style.zIndex = '2195';
-
-    node.style.transform = `rotate(${(-12 + Math.random()*24).toFixed(1)}deg)`;
+    node.style.setProperty('color','rgba(255,255,255,0.98)','important');
+    node.style.setProperty('opacity', (0.22 + Math.random()*0.12).toFixed(2), 'important');
+    node.style.setProperty('filter','none','important');
+    node.style.setProperty('text-shadow','0 2px 6px rgba(0,0,0,0.28)','important');
 
     node.style.animationName = 'tridentIntroFloat';
-    node.style.animationDuration = (mobile ? (2.6 + Math.random()*2).toFixed(2) : (3 + Math.random()*5).toFixed(2)) + 's';
-    node.style.animationDelay = (Math.random()*1.2).toFixed(2) + 's';
+    node.style.animationDuration = (3 + Math.random()*6).toFixed(2) + 's';
+    node.style.animationDelay = (Math.random()*1.6).toFixed(2) + 's';
     node.style.animationTimingFunction = 'ease-in-out';
     node.style.animationIterationCount = 'infinite';
     node.style.animationDirection = 'alternate';
@@ -236,7 +279,34 @@ function populateIntroParticles(){
   });
 }
 
-/* ---------- Loading animation (robust) ---------- */
+/* ---------- Date UI ---------- */
+function updateDateUI(){
+  let el = by('currentDate');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'currentDate';
+    // minimal styling (you can override in CSS)
+    el.style.position = 'fixed';
+    el.style.left = '50%';
+    el.style.transform = 'translateX(-50%)';
+    el.style.bottom = '8px';
+    el.style.padding = '6px 10px';
+    el.style.borderRadius = '8px';
+    el.style.background = 'rgba(0,0,0,0.08)';
+    el.style.color = '#fff';
+    el.style.fontWeight = '700';
+    el.style.fontSize = '0.95rem';
+    el.style.zIndex = '2350';
+    el.style.pointerEvents = 'none';
+    document.body.appendChild(el);
+  }
+  const now = new Date();
+  // show localized date + day name
+  const opts = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+  el.textContent = now.toLocaleDateString(undefined, opts);
+}
+
+/* ---------- Loading animation ---------- */
 function animateLoading(duration){
   return new Promise(resolve=>{
     if(!loadingBar || !loadingText) {
@@ -328,17 +398,25 @@ document.addEventListener('DOMContentLoaded', async ()=>{
   cells.forEach(c => c.addEventListener('click', onCellClick));
   document.addEventListener('keydown', (e)=>{ if(e.key==='Enter' && !sessionStarted && opponentBanner && !opponentBanner.classList.contains('hidden')){ hideBanner(); startGame(); } });
 
-  setActiveChoice(); loadState(); resetBoardUI();
+  // load state then check daily reset
+  loadState();
+  checkAndResetDaily();
+  // show date and schedule automatic midnight reset
+  updateDateUI();
+  scheduleMidnightReset();
 
-  // initial hidden states
+  setActiveChoice(); resetBoardUI();
+
+  // ensure overlays initial hidden state
   if(introOverlay) introOverlay.classList.add('hidden');
   if(opponentBanner) opponentBanner.classList.add('hidden');
   if(resultModal) resultModal.classList.add('hidden');
 
-  // prepare backgrounds/particles early
+  // prepare backgrounds/particles early so they exist when intro shows
   try{ populateBackground(); }catch(e){ dbg('populateBackground error', e); }
   try{ populateIntroParticles(); }catch(e){ dbg('populateIntroParticles error', e); }
 
+  // responsive: regenerate background on resize
   window.addEventListener('resize', ()=>{ try{ populateBackground(); }catch(e){} });
 
   if(state.plays >= MAX_PLAYS){
@@ -357,8 +435,6 @@ document.addEventListener('DOMContentLoaded', async ()=>{
 /* ---------- Game logic (unchanged) ---------- */
 function showBoardLogo(){ if(!boardLogo) return; boardLogo.classList.remove('hidden'); boardLogo.style.display='block'; }
 function hideBoardLogo(){ if(!boardLogo) return; boardLogo.classList.add('hidden'); boardLogo.style.display='none'; }
-function loadState(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw) state = JSON.parse(raw); }catch(e){ state={playerWins:0,cpuWins:0,plays:0}; } updateScoreboardUI(); updatePlaysUI(); checkPlaysLimitUI(); }
-function saveState(){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }catch(e){} }
 function updateScoreboardUI(){ if(playerWinsEl) playerWinsEl.textContent = `${state.playerWins} / ${MAX_PLAYS}`; if(cpuWinsEl) cpuWinsEl.textContent = `${state.cpuWins} / ${MAX_PLAYS}`; if(playerBonusPercentEl) playerBonusPercentEl.textContent = `Bono: ${bonusPercent(state.playerWins)}%`; if(cpuBonusPercentEl) cpuBonusPercentEl.textContent = `Bono: ${bonusPercent(state.cpuWins)}%`; }
 function updatePlaysUI(){ if(playsLeftEl) playsLeftEl.textContent = Math.max(0, MAX_PLAYS - state.plays); }
 function bonusPercent(w){ if(w<=0) return 0; if(w===1) return 100; if(w===2) return 150; return 200; }
