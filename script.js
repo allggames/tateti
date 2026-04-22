@@ -463,7 +463,7 @@ function handleEnd(winner){
               botonAccion = `
                 <div style="margin-top:20px; display:flex; justify-content:center;">
                    <button id="btnReclamarTateti" style="
-                      background-color: #073b12; 
+                      background: linear-gradient(180deg, #ff8c00, #e65100); 
                       color: #ffffff; 
                       border: 2px solid #fff; 
                       padding: 12px 20px; 
