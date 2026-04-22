@@ -453,18 +453,71 @@ function handleEnd(winner){
           modalPercent.textContent = '';
           modalPercent.style.display = 'none';
         }
+        
         if(modalMessage){
+          // Si ganó al menos 1 vez, mostramos el botón verde de reclamo.
+          // Si perdió las 3, mostramos un botón para volver al inicio.
+          let botonAccion = '';
+          
+          if (state.playerWins > 0) {
+              botonAccion = `
+                <div style="margin-top:20px; display:flex; justify-content:center;">
+                   <button id="btnReclamarTateti" style="
+                      background-color: #073b12; 
+                      color: #ffffff; 
+                      border: 2px solid #fff; 
+                      padding: 12px 20px; 
+                      font-weight: 800; 
+                      border-radius: 12px; 
+                      cursor: pointer; 
+                      font-size: 16px;
+                      line-height: 1.2;
+                      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                      font-family: 'Lexend', sans-serif;
+                   ">
+                      RECLAMAR PREMIO 📸<br>
+                      <small style="font-size:0.7em; font-weight:normal;">Capturá y tocá acá</small>
+                   </button>
+                </div>
+              `;
+          } else {
+              botonAccion = `
+                <div style="margin-top:20px; display:flex; justify-content:center;">
+                   <button onclick="location.reload()" style="
+                      background-color: #ef6c00; color: #fff; border: none; padding: 10px 20px; font-weight: 700; border-radius: 10px; cursor: pointer; font-family: 'Lexend', sans-serif;
+                   ">VOLVER AL INICIO</button>
+                </div>
+              `;
+          }
+
           modalMessage.innerHTML = `
             <div style="font-size:1.18rem; font-weight:800; line-height:1.2; text-align:center;">
               ${info.text}
             </div>
             <div style="margin-top:10px; font-size:0.92rem; font-weight:700; text-align:center;">
-              CON CARGA MÍNIMA
+              ${state.playerWins > 0 ? 'CON CARGA MÍNIMA' : '¡Mejor suerte mañana!'}
             </div>
+            ${botonAccion}
           `;
         }
+
+        // Ocultar el botón original de cerrar
+        if(modalClose) modalClose.style.display = 'none';
+        
         if(resultModal) resultModal.classList.remove('hidden');
         hideBoardLogo();
+
+        // Le asignamos la redirección usando el config.js
+        setTimeout(() => {
+           const btnReclamar = document.getElementById('btnReclamarTateti');
+           if (btnReclamar) {
+               btnReclamar.onclick = () => {
+                   const url = typeof SITE_CONFIG !== 'undefined' ? SITE_CONFIG.chatUrl : "https://www.casinoatenea.com/";
+                   window.location.href = url + "?open=true";
+               };
+           }
+        }, 100);
+
       }catch(err){
         console.error('[tateti] error showing final modal', err);
       }
