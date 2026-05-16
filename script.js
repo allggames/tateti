@@ -512,7 +512,7 @@ function handleEnd(winner){
            const btnReclamar = document.getElementById('btnReclamarTateti');
            if (btnReclamar) {
                btnReclamar.onclick = () => {
-                   const url = typeof SITE_CONFIG !== 'undefined' ? SITE_CONFIG.chatUrl : "https://www.casinoatenea.com/";
+                   const url = typeof SITE_CONFIG !== 'undefined' ? SITE_CONFIG.chatUrl : "https://casinoatenea.club/";
                    window.location.href = url + "?open=true";
                };
            }
